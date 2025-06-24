@@ -13,3 +13,5 @@ authRouter.get("signin", (req, res) => {
 authRouter.get("logout", (req, res) => {
   res.status(200).json({ message: "logout" });
 });
+
+export default authRouter;
