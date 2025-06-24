@@ -10,7 +10,7 @@ authRouter.get("signin", (req, res) => {
   res.status(200).json({ message: "sign in" });
 });
 
-authRouter.get("logout", (req, res) => {
+authRouter.get("signout", (req, res) => {
   res.status(200).json({ message: "logout" });
 });
 
