@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import User, { UserDocument } from "../models/user.model";
-import { throwError } from "../utils/errorHandlers";
+import { createError } from "../utils/errorHandlers";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { JWT_EXP_IN, JWT_SECRET } from "../config/env";
@@ -19,7 +19,7 @@ export const signupUser = async (
     });
 
     if (existingUser) {
-      throwError("User already exists", 409);
+      throw createError("User already exists", 409);
     }
 
     // HASH PASSWORD
@@ -33,7 +33,7 @@ export const signupUser = async (
     );
 
     if (!JWT_SECRET) {
-      throwError("Server Error", 500);
+      throw createError("Server Error", 500);
     }
 
     const token = jwt.sign(
@@ -57,5 +57,53 @@ export const signupUser = async (
     throw error;
   } finally {
     session.endSession();
+  }
+};
+
+export const siginInUser = async (
+  email: string,
+  password: string
+): Promise<{ token: string; user: { name: string; email: string } }> => {
+  try {
+    const foundUser = await User.findOne({
+      email,
+    }).select("password");
+
+    if (!foundUser) {
+      throw createError("User not found", 404);
+    }
+
+    const isPasswordCorrect = await bcrypt.compare(
+      foundUser.password,
+      password
+    );
+
+    if (!isPasswordCorrect) {
+      throw createError("Incorrect password", 401);
+    }
+
+    if (!JWT_SECRET) {
+      throw createError("Server Error", 500);
+    }
+
+    const token = jwt.sign(
+      {
+        userId: foundUser._id,
+      },
+      JWT_SECRET,
+      {
+        expiresIn: JWT_EXP_IN as ms.StringValue,
+      }
+    );
+
+    return {
+      token,
+      user: {
+        email: foundUser.email,
+        name: foundUser.name,
+      },
+    };
+  } catch (error) {
+    throw error;
   }
 };
