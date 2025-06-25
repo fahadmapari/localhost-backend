@@ -1,4 +1,4 @@
-import e, { ErrorRequestHandler } from "express";
+import { ErrorRequestHandler } from "express";
 
 const globalErrorMiddleware: ErrorRequestHandler = (err, req, res, next) => {
   try {
@@ -22,7 +22,7 @@ const globalErrorMiddleware: ErrorRequestHandler = (err, req, res, next) => {
     if (error.name === "ValidationError") {
       const message = "Invalid data";
       error = new Error(message);
-      error.status = 400;
+      error.statusCode = 400;
     }
 
     console.log(error);
