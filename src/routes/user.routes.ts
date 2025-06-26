@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { getAllUsers, getUser } from "../controllers/user.controller";
+import { authorizationMiddleware } from "../middlewares/auth.middleware";
 
 const userRouter = Router();
 
-userRouter.get("/", getAllUsers);
+userRouter.get("/", authorizationMiddleware, getAllUsers);
 
-userRouter.get("/:id", getUser);
+userRouter.get("/:id", authorizationMiddleware, getUser);
 
 userRouter.post("/", (req, res) => {
   res.status(200).json({ message: "CREATE USER" });

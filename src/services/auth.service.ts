@@ -67,15 +67,15 @@ export const siginInUser = async (
   try {
     const foundUser = await User.findOne({
       email,
-    }).select("password");
+    }).populate("password");
 
     if (!foundUser) {
       throw createError("User not found", 404);
     }
 
     const isPasswordCorrect = await bcrypt.compare(
-      foundUser.password,
-      password
+      password,
+      foundUser.password
     );
 
     if (!isPasswordCorrect) {
@@ -95,6 +95,8 @@ export const siginInUser = async (
         expiresIn: JWT_EXP_IN as ms.StringValue,
       }
     );
+
+    console.log(foundUser);
 
     return {
       token,

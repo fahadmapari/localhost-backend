@@ -5,11 +5,12 @@ export const sendResponse = (
   message: string,
   success: boolean,
   statusCode: number,
-  data: any
+  data?: any
 ) => {
   response.status(statusCode).json({
     success: success,
     message: message || (success ? "Request successful" : "Request failed"),
     data: data,
   });
+  return;
 };

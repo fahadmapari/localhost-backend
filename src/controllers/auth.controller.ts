@@ -1,5 +1,6 @@
 import { siginInUser, signupUser } from "../services/auth.service";
 import { ExpressController } from "../types/controller.types";
+import { sendResponse } from "../utils/controller";
 
 export const signup: ExpressController = async (req, res, next) => {
   try {
@@ -20,6 +21,10 @@ export const signup: ExpressController = async (req, res, next) => {
 export const signIn: ExpressController = async (req, res, next) => {
   try {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      return sendResponse(res, "Invalid request", false, 400);
+    }
 
     const { token, user } = await siginInUser(email, password);
 
