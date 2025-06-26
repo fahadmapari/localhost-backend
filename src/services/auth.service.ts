@@ -2,15 +2,14 @@ import mongoose from "mongoose";
 import User, { UserDocument } from "../models/user.model";
 import { createError } from "../utils/errorHandlers";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import { JWT_EXP_IN, JWT_SECRET } from "../config/env";
-import ms from "ms";
+import { generateAccessToken, generateRefreshToken } from "../utils/jwt";
+import redisClient from "../config/redis";
 
 export const signupUser = async (
   name: string,
   email: string,
   password: string
-): Promise<{ token: string; user: UserDocument }> => {
+): Promise<{ accessToken: string; refreshToken: string; user: UserDocument }> => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
@@ -22,7 +21,6 @@ export const signupUser = async (
       throw createError("User already exists", 409);
     }
 
-    // HASH PASSWORD
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await User.create(
@@ -32,24 +30,17 @@ export const signupUser = async (
       }
     );
 
-    if (!JWT_SECRET) {
-      throw createError("Server Error", 500);
-    }
+    const payload = { userId: newUser[0]._id.toString() };
+    const accessToken = generateAccessToken(payload);
+    const refreshToken = generateRefreshToken(payload);
 
-    const token = jwt.sign(
-      {
-        userId: newUser[0]._id.toString(),
-      },
-      JWT_SECRET!,
-      {
-        expiresIn: JWT_EXP_IN as ms.StringValue,
-      }
-    );
+    await redisClient.set(newUser[0]._id.toString(), refreshToken);
 
     await session.commitTransaction();
 
     return {
-      token,
+      accessToken,
+      refreshToken,
       user: newUser[0],
     };
   } catch (error) {
@@ -63,7 +54,11 @@ export const signupUser = async (
 export const siginInUser = async (
   email: string,
   password: string
-): Promise<{ token: string; user: { name: string; email: string } }> => {
+): Promise<{
+  accessToken: string;
+  refreshToken: string;
+  user: { name: string; email: string };
+}> => {
   try {
     const foundUser = await User.findOne({
       email,
@@ -82,22 +77,15 @@ export const siginInUser = async (
       throw createError("Incorrect password", 401);
     }
 
-    if (!JWT_SECRET) {
-      throw createError("Server Error", 500);
-    }
+    const payload = { userId: foundUser._id.toString() };
+    const accessToken = generateAccessToken(payload);
+    const refreshToken = generateRefreshToken(payload);
 
-    const token = jwt.sign(
-      {
-        userId: foundUser._id,
-      },
-      JWT_SECRET,
-      {
-        expiresIn: JWT_EXP_IN as ms.StringValue,
-      }
-    );
+    await redisClient.set(foundUser._id.toString(), refreshToken);
 
     return {
-      token,
+      accessToken,
+      refreshToken,
       user: {
         email: foundUser.email,
         name: foundUser.name,

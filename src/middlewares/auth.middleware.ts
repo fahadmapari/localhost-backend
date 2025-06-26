@@ -1,8 +1,7 @@
 import { sendResponse } from "../utils/controller";
-import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "../config/env";
 import User from "../models/user.model";
 import { ExpressController } from "../types/controller.types";
+import { verifyAccessToken } from "../utils/jwt";
 
 export const authorizationMiddleware: ExpressController = async (
   req,
@@ -23,7 +22,7 @@ export const authorizationMiddleware: ExpressController = async (
       return sendResponse(res, "Unauthorized", false, 401);
     }
 
-    const decoded: any = jwt.verify(token, JWT_SECRET as string);
+    const decoded: any = verifyAccessToken(token);
 
     const user = await User.findById(decoded.userId);
 
