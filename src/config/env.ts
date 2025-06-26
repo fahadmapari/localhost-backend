@@ -4,5 +4,13 @@ config({
   path: `.env.${process.env.NODE_ENV || "development.local"}`,
 });
 
-export const { PORT, DB_URI, NODE_ENV, JWT_SECRET, JWT_EXP_IN, ARCJET_KEY } =
-  process.env;
+export const {
+  PORT,
+  DB_URI,
+  NODE_ENV,
+  JWT_SECRET,
+  JWT_EXP_IN,
+  ARCJET_KEY,
+  REDIS_URL,
+  REDIS_TOKEN,
+} = process.env;
