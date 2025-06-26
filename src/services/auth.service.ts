@@ -96,8 +96,6 @@ export const siginInUser = async (
       }
     );
 
-    console.log(foundUser);
-
     return {
       token,
       user: {
