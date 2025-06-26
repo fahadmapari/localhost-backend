@@ -6,12 +6,15 @@ import subscriptionRouter from "./routes/subscription.routes";
 import { connectDB } from "./db/mongoDB";
 import globalErrorMiddleware from "./middlewares/error.middleware";
 import cookieParser from "cookie-parser";
+import { arcjetMiddleware } from "./middlewares/arcjet.middleware";
 
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+app.use(arcjetMiddleware);
 
 app.get("/", (req, res) => {
   res.status(200).json({ message: "Hello World" });
