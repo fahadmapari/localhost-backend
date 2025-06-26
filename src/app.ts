@@ -7,7 +7,6 @@ import { connectDB } from "./db/mongoDB";
 import globalErrorMiddleware from "./middlewares/error.middleware";
 import cookieParser from "cookie-parser";
 import { arcjetMiddleware } from "./middlewares/arcjet.middleware";
-import redisClient from "./config/redis";
 
 const app = express();
 
