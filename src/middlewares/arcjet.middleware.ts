@@ -19,6 +19,8 @@ export const arcjetMiddleware: RequestHandler = async (req, res, next) => {
 
       return sendResponse(res, "Access denied", false, 403);
     }
+
+    next();
   } catch (error) {
     console.error("Arcjet middleware error:", error);
     return sendResponse(res, "Internal Server Error", false, 500);
