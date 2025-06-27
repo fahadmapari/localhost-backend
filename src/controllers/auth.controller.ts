@@ -6,12 +6,23 @@ export const signup: ExpressController = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
 
-    const { token, user } = await signupUser(name, email, password);
+    const { accessToken, refreshToken, user } = await signupUser(
+      name,
+      email,
+      password
+    );
+
+    res.cookie("token", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
 
     res.status(201).json({
       success: true,
       message: "User created successfully",
-      data: { token, user },
+      data: { accessToken, user },
     });
   } catch (error) {
     next(error);

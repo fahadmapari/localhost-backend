@@ -3,14 +3,23 @@ import User, { UserDocument } from "../models/user.model";
 import { createError } from "../utils/errorHandlers";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { JWT_EXP_IN, JWT_SECRET } from "../config/env";
+import {
+  JWT_EXP_IN,
+  JWT_REFRESH_EXP_IN,
+  JWT_REFRESH_SECRET,
+  JWT_SECRET,
+} from "../config/env";
 import ms from "ms";
 
 export const signupUser = async (
   name: string,
   email: string,
   password: string
-): Promise<{ token: string; user: UserDocument }> => {
+): Promise<{
+  accessToken: string;
+  refreshToken: string;
+  user: UserDocument;
+}> => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
@@ -36,9 +45,10 @@ export const signupUser = async (
       throw createError("Server Error", 500);
     }
 
-    const token = jwt.sign(
+    const accessToken = jwt.sign(
       {
         userId: newUser[0]._id.toString(),
+        email: newUser[0].email,
       },
       JWT_SECRET!,
       {
@@ -46,10 +56,21 @@ export const signupUser = async (
       }
     );
 
+    const refreshToken = jwt.sign(
+      {
+        userId: newUser[0]._id.toString(),
+      },
+      JWT_REFRESH_SECRET!,
+      {
+        expiresIn: JWT_REFRESH_EXP_IN as ms.StringValue,
+      }
+    );
+
     await session.commitTransaction();
 
     return {
-      token,
+      accessToken,
+      refreshToken,
       user: newUser[0],
     };
   } catch (error) {
