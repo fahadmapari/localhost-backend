@@ -25,19 +25,18 @@ export const authorizationMiddleware: ExpressController = async (
 
     const decoded: any = jwt.verify(token, JWT_SECRET as string);
 
-    const user = await User.findById(decoded.userId);
-
-    if (!user) {
-      return sendResponse(res, "Unauthorized", false, 401);
-    }
-
     req.user = {
-      id: user.id,
-      email: user.email,
+      id: decoded.userId,
+      email: decoded.email,
     };
 
     next();
-  } catch (error) {
-    return sendResponse(res, "Unauthorized", false, 401);
+  } catch (error: any) {
+    return sendResponse(
+      res,
+      error?.message || "Unauthorized",
+      false,
+      error?.statusCode || 401
+    );
   }
 };

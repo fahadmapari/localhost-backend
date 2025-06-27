@@ -41,7 +41,7 @@ export const signupUser = async (
       }
     );
 
-    if (!JWT_SECRET) {
+    if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
       throw createError("Server Error", 500);
     }
 
@@ -84,7 +84,11 @@ export const signupUser = async (
 export const siginInUser = async (
   email: string,
   password: string
-): Promise<{ token: string; user: { name: string; email: string } }> => {
+): Promise<{
+  accessToken: string;
+  refreshToken: string;
+  user: { name: string; email: string };
+}> => {
   try {
     const foundUser = await User.findOne({
       email,
@@ -103,13 +107,14 @@ export const siginInUser = async (
       throw createError("Incorrect password", 401);
     }
 
-    if (!JWT_SECRET) {
+    if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
       throw createError("Server Error", 500);
     }
 
-    const token = jwt.sign(
+    const accessToken = jwt.sign(
       {
         userId: foundUser._id,
+        email: foundUser.email,
       },
       JWT_SECRET,
       {
@@ -117,8 +122,19 @@ export const siginInUser = async (
       }
     );
 
+    const refreshToken = jwt.sign(
+      {
+        userId: foundUser._id,
+      },
+      JWT_REFRESH_SECRET,
+      {
+        expiresIn: JWT_REFRESH_EXP_IN as ms.StringValue,
+      }
+    );
+
     return {
-      token,
+      accessToken,
+      refreshToken,
       user: {
         email: foundUser.email,
         name: foundUser.name,
@@ -128,3 +144,5 @@ export const siginInUser = async (
     throw error;
   }
 };
+
+export const generateRefreshToken = async (refreshToken: string) => {};
