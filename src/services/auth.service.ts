@@ -145,4 +145,10 @@ export const siginInUser = async (
   }
 };
 
-export const generateRefreshToken = async (refreshToken: string) => {};
+export const generateRefreshToken = async (refreshToken: string) => {
+  try {
+    const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET!);
+  } catch (error) {
+    throw error;
+  }
+};
