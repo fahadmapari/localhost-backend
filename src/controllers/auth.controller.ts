@@ -1,6 +1,6 @@
-import { send } from "process";
 import {
   refreshAccessToken,
+  revokeRefreshToken,
   siginInUser,
   signupUser,
 } from "../services/auth.service";
@@ -66,7 +66,7 @@ export const signIn: ExpressController = async (req, res, next) => {
 
 export const refreshToken: ExpressController = async (req, res, next) => {
   try {
-    const refreshToken = req.cookies.token || req.body.refreshToken;
+    const refreshToken = req.cookies.token || req.body.token;
 
     if (!refreshToken) {
       return sendResponse(res, "Refresh token is required", false, 401);
@@ -79,5 +79,24 @@ export const refreshToken: ExpressController = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+export const logout: ExpressController = async (req, res, next) => {
+  try {
+    const token = req.cookies.token || req.body.token;
+
+    if (!token) {
+      return sendResponse(res, "", true, 204);
+    }
+
+    await revokeRefreshToken(token);
+
+    res.clearCookie("token");
+
+    sendResponse(res, "Logged out successfully", true, 200);
+  } catch (error) {
+    res.clearCookie("token");
+    sendResponse(res, "Logged out successfully", true, 200);
   }
 };

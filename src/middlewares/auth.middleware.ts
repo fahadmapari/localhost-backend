@@ -1,7 +1,6 @@
 import { sendResponse } from "../utils/controller";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config/env";
-import User from "../models/user.model";
 import { ExpressController } from "../types/controller.types";
 
 export const authorizationMiddleware: ExpressController = async (

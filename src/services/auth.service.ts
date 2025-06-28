@@ -189,3 +189,12 @@ export const refreshAccessToken = async (refreshToken: string) => {
     throw error;
   }
 };
+
+export const revokeRefreshToken = async (refreshToken: string) => {
+  try {
+    const decoded: any = jwt.verify(refreshToken, JWT_REFRESH_SECRET!);
+    await redisClient.del(`refresh:${decoded?.jti}`);
+  } catch (error) {
+    throw error;
+  }
+};
