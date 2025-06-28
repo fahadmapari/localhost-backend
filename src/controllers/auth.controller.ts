@@ -1,4 +1,9 @@
-import { siginInUser, signupUser } from "../services/auth.service";
+import { send } from "process";
+import {
+  refreshAccessToken,
+  siginInUser,
+  signupUser,
+} from "../services/auth.service";
 import { ExpressController } from "../types/controller.types";
 import { sendResponse } from "../utils/controller";
 
@@ -61,6 +66,17 @@ export const signIn: ExpressController = async (req, res, next) => {
 
 export const refreshToken: ExpressController = async (req, res, next) => {
   try {
+    const refreshToken = req.cookies.token || req.body.refreshToken;
+
+    if (!refreshToken) {
+      return sendResponse(res, "Refresh token is required", false, 401);
+    }
+
+    const accessToken = await refreshAccessToken(refreshToken);
+
+    sendResponse(res, "Token refreshed successfully", true, 200, {
+      accessToken,
+    });
   } catch (error) {
     next(error);
   }

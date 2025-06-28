@@ -10,6 +10,8 @@ import {
   JWT_SECRET,
 } from "../config/env";
 import ms from "ms";
+import crypto from "crypto";
+import redisClient from "../config/redis";
 
 export const signupUser = async (
   name: string,
@@ -56,15 +58,20 @@ export const signupUser = async (
       }
     );
 
+    const jti = crypto.randomUUID();
+
     const refreshToken = jwt.sign(
       {
         userId: newUser[0]._id.toString(),
+        jti,
       },
       JWT_REFRESH_SECRET!,
       {
         expiresIn: JWT_REFRESH_EXP_IN as ms.StringValue,
       }
     );
+
+    await redisClient.set(`refresh:${jti}`, newUser[0]._id.toString());
 
     await session.commitTransaction();
 
@@ -113,7 +120,7 @@ export const siginInUser = async (
 
     const accessToken = jwt.sign(
       {
-        userId: foundUser._id,
+        userId: foundUser._id.toString(),
         email: foundUser.email,
       },
       JWT_SECRET,
@@ -122,15 +129,20 @@ export const siginInUser = async (
       }
     );
 
+    const jti = crypto.randomUUID();
+
     const refreshToken = jwt.sign(
       {
-        userId: foundUser._id,
+        userId: foundUser._id.toString(),
+        jti,
       },
       JWT_REFRESH_SECRET,
       {
         expiresIn: JWT_REFRESH_EXP_IN as ms.StringValue,
       }
     );
+
+    await redisClient.set(`refresh:${jti}`, foundUser._id.toString());
 
     return {
       accessToken,
@@ -145,10 +157,35 @@ export const siginInUser = async (
   }
 };
 
-export const generateRefreshToken = async (refreshToken: string) => {
+export const refreshAccessToken = async (refreshToken: string) => {
   try {
-    const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET!);
-  } catch (error) {
+    const decoded: any = jwt.verify(refreshToken, JWT_REFRESH_SECRET!);
+
+    const exists = await redisClient.get(`refresh:${decoded?.jti}`);
+
+    if (!exists || exists !== decoded.userId) {
+      throw createError("Invalid token", 401);
+    }
+
+    const accessToken = jwt.sign(
+      {
+        userId: decoded.userId,
+        email: decoded.email,
+      },
+      JWT_SECRET!,
+      {
+        expiresIn: JWT_EXP_IN as ms.StringValue,
+      }
+    );
+
+    return accessToken;
+  } catch (error: any) {
+    if (
+      error?.message === "jwt expired" ||
+      error?.message === "invalid signature"
+    ) {
+      error.statusCode = 401;
+    }
     throw error;
   }
 };
