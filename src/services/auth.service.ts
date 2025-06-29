@@ -71,7 +71,10 @@ export const signupUser = async (
       }
     );
 
-    await redisClient.set(`refresh:${jti}`, newUser[0]._id.toString());
+    await redisClient.set(`refresh:${jti}`, newUser[0]._id.toString(), {
+      ex: 30 * 24 * 60 * 60, // 30 days
+      nx: true, // Only set if not exists
+    });
 
     await session.commitTransaction();
 
@@ -142,7 +145,10 @@ export const siginInUser = async (
       }
     );
 
-    await redisClient.set(`refresh:${jti}`, foundUser._id.toString());
+    await redisClient.set(`refresh:${jti}`, foundUser._id.toString(), {
+      ex: 30 * 24 * 60 * 60, // 30 days
+      nx: true, // Only set if not exists
+    });
 
     return {
       accessToken,
