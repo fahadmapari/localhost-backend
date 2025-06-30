@@ -8,11 +8,20 @@ import globalErrorMiddleware from "./middlewares/error.middleware";
 import cookieParser from "cookie-parser";
 import { arcjetMiddleware } from "./middlewares/arcjet.middleware";
 
+import cors from "cors";
+
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+app.use(
+  cors({
+    origin: "http://localhost:3000", // frontend port
+    credentials: true, // if using cookies
+  })
+);
 
 app.use(arcjetMiddleware);
 
