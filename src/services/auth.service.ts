@@ -196,6 +196,25 @@ export const refreshAccessToken = async (refreshToken: string) => {
   }
 };
 
+export const verifyAccessToken = async (accessToken: string) => {
+  try {
+    const decoded: any = jwt.verify(accessToken, JWT_SECRET!);
+
+    return {
+      userId: decoded.userId as string,
+      email: decoded.email as string,
+    };
+  } catch (error: any) {
+    if (
+      error.message === "jwt expired" ||
+      error.message === "invalid signature"
+    ) {
+      error.statusCode = 401;
+    }
+    throw error;
+  }
+};
+
 export const revokeRefreshToken = async (refreshToken: string) => {
   try {
     const decoded: any = jwt.verify(refreshToken, JWT_REFRESH_SECRET!);

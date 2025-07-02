@@ -4,6 +4,7 @@ import {
   revokeRefreshToken,
   siginInUser,
   signupUser,
+  verifyAccessToken,
 } from "../services/auth.service";
 import { ExpressController } from "../types/controller.types";
 import { sendResponse } from "../utils/controller";
@@ -81,7 +82,7 @@ export const signIn: ExpressController = async (req, res, next) => {
 
 export const refreshToken: ExpressController = async (req, res, next) => {
   try {
-    const refreshToken = req.cookies.token || req.body.token;
+    const refreshToken: string = req.cookies.refreshToken || req.body.token;
 
     if (!refreshToken) {
       return sendResponse(res, "Refresh token is required", false, 401);
@@ -99,6 +100,24 @@ export const refreshToken: ExpressController = async (req, res, next) => {
     sendResponse(res, "Token refreshed successfully", true, 200, {
       accessToken,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyToken: ExpressController = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization
+      ? req.headers.authorization?.split(" ")[1]
+      : null;
+
+    if (!token) {
+      return sendResponse(res, "Invalid request", false, 401);
+    }
+
+    await verifyAccessToken(token);
+
+    sendResponse(res, "Request successful", true, 200);
   } catch (error) {
     next(error);
   }
