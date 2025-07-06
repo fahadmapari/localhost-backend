@@ -1,5 +1,5 @@
-import User, { UserDocument } from "../models/user.model";
-import { createError } from "../utils/errorHandlers";
+import User, { UserDocument } from "../models/user.model.js";
+import { createError } from "../utils/errorHandlers.js";
 
 export const getAllRegisteredUsers = async (): Promise<UserDocument[]> => {
   try {

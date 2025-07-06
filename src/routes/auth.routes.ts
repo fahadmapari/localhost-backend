@@ -5,7 +5,7 @@ import {
   signIn,
   signup,
   verifyToken,
-} from "../controllers/auth.controller";
+} from "../controllers/auth.controller.js";
 
 const authRouter = Router();
 

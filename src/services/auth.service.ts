@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
-import User, { UserDocument } from "../models/user.model";
-import { createError } from "../utils/errorHandlers";
+import User, { UserDocument } from "../models/user.model.js";
+import { createError } from "../utils/errorHandlers.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import {
@@ -8,10 +8,10 @@ import {
   JWT_REFRESH_EXP_IN,
   JWT_REFRESH_SECRET,
   JWT_SECRET,
-} from "../config/env";
+} from "../config/env.js";
 import ms from "ms";
 import crypto from "crypto";
-import redisClient from "../config/redis";
+import redisClient from "../config/redis.js";
 
 export const signupUser = async (
   name: string,

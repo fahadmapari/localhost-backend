@@ -1,7 +1,7 @@
-import { sendResponse } from "../utils/controller";
+import { sendResponse } from "../utils/controller.js";
 import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "../config/env";
-import { ExpressController } from "../types/controller.types";
+import { JWT_SECRET } from "../config/env.js";
+import { ExpressController } from "../types/controller.types.js";
 
 export const authorizationMiddleware: ExpressController = async (
   req,
