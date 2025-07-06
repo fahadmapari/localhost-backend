@@ -10,6 +10,7 @@ import { arcjetMiddleware } from "./middlewares/arcjet.middleware";
 import morgan from "morgan";
 
 import cors from "cors";
+import productRouter from "./routes/product.routes";
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/products", productRouter);
 app.use("/api/v1/subscriptions", subscriptionRouter);
 
 app.use(globalErrorMiddleware);
