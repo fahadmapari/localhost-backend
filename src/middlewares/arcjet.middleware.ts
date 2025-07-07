@@ -1,6 +1,6 @@
 import { RequestHandler } from "express";
-import { aj } from "../config/arcjet";
-import { sendResponse } from "../utils/controller";
+import { aj } from "../config/arcjet.ts";
+import { sendResponse } from "../utils/controller.ts";
 
 export const arcjetMiddleware: RequestHandler = async (req, res, next) => {
   try {

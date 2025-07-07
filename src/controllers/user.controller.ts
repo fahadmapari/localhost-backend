@@ -1,6 +1,9 @@
-import { getAllRegisteredUsers, getUserById } from "../services/user.service";
-import { ExpressController } from "../types/controller.types";
-import { sendResponse } from "../utils/controller";
+import {
+  getAllRegisteredUsers,
+  getUserById,
+} from "../services/user.service.ts";
+import { ExpressController } from "../types/controller.types.ts";
+import { sendResponse } from "../utils/controller.ts";
 
 export const getAllUsers: ExpressController = async (req, res, next) => {
   try {

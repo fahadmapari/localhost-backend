@@ -1,13 +1,13 @@
-import { NODE_ENV } from "../config/env";
+import { NODE_ENV } from "../config/env.ts";
 import {
   refreshAccessToken,
   revokeRefreshToken,
   siginInUser,
   signupUser,
   verifyAccessToken,
-} from "../services/auth.service";
-import { ExpressController } from "../types/controller.types";
-import { sendResponse } from "../utils/controller";
+} from "../services/auth.service.ts";
+import { ExpressController } from "../types/controller.types.ts";
+import { sendResponse } from "../utils/controller.ts";
 
 export const signup: ExpressController = async (req, res, next) => {
   try {

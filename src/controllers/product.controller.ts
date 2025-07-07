@@ -1,7 +1,7 @@
-import { productZodSchema } from "../schema/product.schema";
-import { addNewProduct, getAllProducts } from "../services/product.service";
-import { ExpressController } from "../types/controller.types";
-import { sendResponse } from "../utils/controller";
+import { productZodSchema } from "../schema/product.schema.ts";
+import { addNewProduct, getAllProducts } from "../services/product.service.ts";
+import { ExpressController } from "../types/controller.types.ts";
+import { sendResponse } from "../utils/controller.ts";
 
 export const getProducts: ExpressController = async (req, res, next) => {
   try {

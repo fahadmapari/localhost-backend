@@ -1,5 +1,5 @@
-import Product from "../models/product.model";
-import { ProductType } from "../schema/product.schema";
+import Product from "../models/product.model.ts";
+import { ProductType } from "../schema/product.schema.ts";
 
 export const getAllProducts = async () => {
   try {
