@@ -8,6 +8,7 @@ import globalErrorMiddleware from "./middlewares/error.middleware";
 import cookieParser from "cookie-parser";
 import { arcjetMiddleware } from "./middlewares/arcjet.middleware";
 import morgan from "morgan";
+import compression from "compression";
 
 import cors from "cors";
 import productRouter from "./routes/product.routes";
@@ -28,6 +29,8 @@ app.use(
 );
 
 app.use(arcjetMiddleware);
+
+app.use(compression());
 
 app.get("/", (req, res) => {
   res.status(200).json({ message: "Hello World" });
