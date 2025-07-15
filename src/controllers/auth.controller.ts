@@ -11,12 +11,13 @@ import { sendResponse } from "../utils/controller";
 
 export const signup: ExpressController = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     const { accessToken, refreshToken, user } = await signupUser(
       name,
       email,
-      password
+      password,
+      role
     );
 
     res

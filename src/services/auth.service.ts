@@ -16,7 +16,8 @@ import redisClient from "../config/redis";
 export const signupUser = async (
   name: string,
   email: string,
-  password: string
+  password: string,
+  role: string
 ): Promise<{
   accessToken: string;
   refreshToken: string;
@@ -37,7 +38,7 @@ export const signupUser = async (
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = await User.create(
-      [{ name, email, password: hashedPassword }],
+      [{ name, email, password: hashedPassword, role }],
       {
         session,
       }
@@ -51,6 +52,7 @@ export const signupUser = async (
       {
         userId: newUser[0]._id.toString(),
         email: newUser[0].email,
+        role: newUser[0].role,
       },
       JWT_SECRET!,
       {
@@ -125,6 +127,7 @@ export const siginInUser = async (
       {
         userId: foundUser._id.toString(),
         email: foundUser.email,
+        role: foundUser.role,
       },
       JWT_SECRET,
       {
