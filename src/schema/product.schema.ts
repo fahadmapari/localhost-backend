@@ -126,3 +126,5 @@ export const productZodSchema = z.object({
   overridePriceFromContract: z.boolean(),
   isBookingPerProduct: z.boolean(),
 });
+
+export type ProductType = z.infer<typeof productZodSchema>;
