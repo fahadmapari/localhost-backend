@@ -23,7 +23,7 @@ app.use(morgan("dev"));
 
 app.use(
   cors({
-    origin: "http://localhost:3000", // frontend port
+    origin: ["http://localhost:3000", "http://localhost:5173"], // frontend port
     credentials: true, // if using cookies
   })
 );

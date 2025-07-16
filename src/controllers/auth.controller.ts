@@ -1,3 +1,4 @@
+import { refreshAccessToken } from "./../services/auth.service";
 import { NODE_ENV } from "../config/env";
 import {
   refreshAccessToken,
@@ -126,19 +127,20 @@ export const verifyToken: ExpressController = async (req, res, next) => {
 
 export const logout: ExpressController = async (req, res, next) => {
   try {
-    const token = req.cookies.token || req.body.token;
+    const refreshToken = req.cookies.refreshAccessToken || req.body.token;
 
-    if (!token) {
-      return sendResponse(res, "", true, 204);
+    if (!refreshToken) {
+      res.clearCookie("accessToken").clearCookie("refreshToken");
+      return sendResponse(res, "Logged out successfully", true, 204);
     }
 
-    await revokeRefreshToken(token);
+    await revokeRefreshToken(refreshToken);
 
-    res.clearCookie("token");
+    res.clearCookie("accessToken").clearCookie("refreshToken");
 
     sendResponse(res, "Logged out successfully", true, 200);
   } catch (error) {
-    res.clearCookie("token");
+    res.clearCookie("accessToken").clearCookie("refreshToken");
     sendResponse(res, "Logged out successfully", true, 200);
   }
 };
