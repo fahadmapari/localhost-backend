@@ -1,6 +1,15 @@
 import mongoose, { InferSchemaType } from "mongoose";
+import { required } from "zod/v4/core/util.cjs";
 
 const meetingPointSchema = new mongoose.Schema({
+  country: {
+    type: String,
+    required: true,
+  },
+  city: {
+    type: String,
+    required: true,
+  },
   latitude: {
     type: Number,
     required: true,
@@ -104,7 +113,7 @@ const productSchema = new mongoose.Schema(
     tourTextLanguage: {
       type: String,
       required: true,
-      enum: ["english", "spanish"],
+      enum: ["english"],
       default: "english",
     },
     bookingType: {
@@ -113,11 +122,12 @@ const productSchema = new mongoose.Schema(
       enum: ["instant", "request"],
       default: "instant",
     },
-    tourGuideLanguage: {
-      type: String,
+    tourGuideLanguageInstant: {
+      type: [String],
+    },
+    tourGuideLanguageOnRequest: {
+      type: [String],
       required: true,
-      enum: ["english", "spanish"],
-      default: "english",
     },
     mandatoryInformation: {
       type: [String],
@@ -152,6 +162,16 @@ const productSchema = new mongoose.Schema(
     endPoint: endPointSchema,
     tags: {
       type: [String],
+      enum: [
+        "walk",
+        "museum",
+        "palace",
+        "science",
+        "technology",
+        "beer",
+        "christmas",
+      ],
+      required: true,
     },
 
     images: {
@@ -162,8 +182,8 @@ const productSchema = new mongoose.Schema(
     priceModel: {
       type: String,
       required: true,
-      enum: ["fixed"],
-      default: "fixed",
+      enum: ["fixed rate", "per pax"],
+      default: "fixed rate",
     },
     currency: {
       type: String,
@@ -171,20 +191,37 @@ const productSchema = new mongoose.Schema(
       enum: ["USD", "EUR", "GBP", "INR"],
       default: "EUR",
     },
-    b2bRate: {
+    b2bRateInstant: {
       type: Number,
       required: true,
     },
-    b2bExtraHourSupplement: {
+    b2bExtraHourSupplementInsant: {
       type: Number,
-      required: true,
       default: 0,
     },
-    b2cRate: {
+    b2bRateOnRequest: {
       type: Number,
+      required: true,
     },
-    b2cExtraHourSupplement: {
+    b2bExtraHourSupplementOnRequest: {
       type: Number,
+      default: 0,
+    },
+    b2cRateInstant: {
+      type: Number,
+      required: true,
+    },
+    b2cExtraHourSupplementInstant: {
+      type: Number,
+      default: 0,
+    },
+    b2cRateOnRequest: {
+      type: Number,
+      required: true,
+    },
+    b2cExtraHourSupplementOnRequest: {
+      type: Number,
+      default: 0,
     },
     closedDates: {
       type: [Date],
