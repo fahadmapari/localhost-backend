@@ -23,8 +23,14 @@ const endPointSchema = z.object({
 });
 
 const availabilitySchema = z.object({
-  startDate: z.date().optional(),
-  endDate: z.date().optional(),
+  startDate: z
+    .string()
+    .transform((val) => new Date(val))
+    .optional(),
+  endDate: z
+    .string()
+    .transform((val) => new Date(val))
+    .optional(),
   startTime: z.string().min(1, "Start time is required."),
   endTime: z.string().min(1, "End time is required."),
   duration: z.object({
@@ -92,12 +98,14 @@ export const productZodSchema = z.object({
     .min(1, "At least one tag is required."),
   images: z
     .array(
-      z
-        .file()
-        .mime(["image/jpeg", "image/png", "image/webp"], {
-          error: "Only JPG, PNG, and WebP images are allowed.",
-        })
-        .max(1024 * 1024 * 5, "Image size must be less than 5MB.")
+      z.object().transform((val) =>
+        z
+          .file(val)
+          .mime(["image/jpeg", "image/png", "image/webp"], {
+            error: "Only JPG, PNG, and WebP images are allowed.",
+          })
+          .max(1024 * 1024 * 5, "Image size must be less than 5MB.")
+      )
     )
     .min(1, "At least one image is required."),
   priceModel: z.enum(["fixed rate", "per pax"]),
@@ -111,8 +119,10 @@ export const productZodSchema = z.object({
   b2cExtraHourSupplementInstant: z.number().optional(),
   b2cRateOnRequest: z.number("B2C On Request rate is required."),
   b2cExtraHourSupplementOnRequest: z.number().optional(),
-  closedDates: z.array(z.date()).optional(),
-  holidayDates: z.array(z.date()).optional(),
+  closedDates: z.array(z.string().transform((val) => new Date(val))).optional(),
+  holidayDates: z
+    .array(z.string().transform((val) => new Date(val)))
+    .optional(),
 
   publicHolidaySupplementPercent: z.number(),
   weekendSupplementPercent: z.number(),

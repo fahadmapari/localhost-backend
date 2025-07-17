@@ -18,10 +18,10 @@ export const addProduct: ExpressController = async (req, res, next) => {
   try {
     const parsedBody = productZodSchema.parse(req.body);
 
-    const newProduct = await addNewProduct(parsedBody);
+    // const newProduct = await addNewProduct(parsedBody);
 
     sendResponse(res, "Product added successfully", true, 200, {
-      product: newProduct,
+      product: parsedBody,
     });
   } catch (error) {
     next(error);
