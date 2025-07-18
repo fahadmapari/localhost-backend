@@ -44,16 +44,27 @@ const endPointSchema = z.object({
   text: z.string().optional(),
 });
 
-const availabilitySchema = z.object({
-  startDate: z.coerce.date().optional(),
-  endDate: z.coerce.date().optional(),
-  startTime: z.string().min(1, "Start time is required."),
-  endTime: z.string().min(1, "End time is required."),
-  duration: z.object({
-    value: z.coerce.number("Duration value is required."),
-    unit: z.enum(["minutes", "hours", "days"]),
-  }),
-});
+const availabilitySchema = z
+  .object({
+    startDate: z.coerce.date().optional(),
+    endDate: z.coerce.date().optional(),
+    startTime: z.string().min(1, "Start time is required."),
+    endTime: z.string().min(1, "End time is required."),
+    duration: z.object({
+      value: z.coerce.number("Duration value is required."),
+      unit: z.enum(["minutes", "hours", "days"]),
+    }),
+  })
+  .refine(
+    (data) => {
+      if (!data.startDate || !data.endDate) return true;
+      return data.startDate <= data.endDate;
+    },
+    {
+      error: "Start date must be before end date.",
+      path: ["startDate"],
+    }
+  );
 
 export const productZodSchema = z.object({
   title: z.string().min(1, "Title is required."),
