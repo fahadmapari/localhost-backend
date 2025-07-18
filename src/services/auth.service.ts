@@ -51,7 +51,6 @@ export const signupUser = async (
     const accessToken = jwt.sign(
       {
         userId: newUser[0]._id.toString(),
-        email: newUser[0].email,
         role: newUser[0].role,
       },
       JWT_SECRET!,
@@ -65,6 +64,7 @@ export const signupUser = async (
     const refreshToken = jwt.sign(
       {
         userId: newUser[0]._id.toString(),
+        role: newUser[0].role,
         jti,
       },
       JWT_REFRESH_SECRET!,
@@ -126,7 +126,6 @@ export const siginInUser = async (
     const accessToken = jwt.sign(
       {
         userId: foundUser._id.toString(),
-        email: foundUser.email,
         role: foundUser.role,
       },
       JWT_SECRET,
@@ -140,6 +139,7 @@ export const siginInUser = async (
     const refreshToken = jwt.sign(
       {
         userId: foundUser._id.toString(),
+        role: foundUser.role,
         jti,
       },
       JWT_REFRESH_SECRET,
@@ -179,7 +179,7 @@ export const refreshAccessToken = async (refreshToken: string) => {
     const accessToken = jwt.sign(
       {
         userId: decoded.userId,
-        email: decoded.email,
+        role: decoded.role,
       },
       JWT_SECRET!,
       {
@@ -205,7 +205,7 @@ export const verifyAccessToken = async (accessToken: string) => {
 
     return {
       userId: decoded.userId as string,
-      email: decoded.email as string,
+      role: decoded.role as string,
     };
   } catch (error: any) {
     if (

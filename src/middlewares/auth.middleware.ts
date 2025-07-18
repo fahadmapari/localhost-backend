@@ -2,6 +2,7 @@ import { sendResponse } from "../utils/controller";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config/env";
 import { ExpressController } from "../types/controller.types";
+import { createError } from "../utils/errorHandlers";
 
 export const authorizationMiddleware: ExpressController = async (
   req,
@@ -26,7 +27,7 @@ export const authorizationMiddleware: ExpressController = async (
 
     req.user = {
       id: decoded.userId,
-      email: decoded.email,
+      role: decoded.role,
     };
 
     next();
@@ -37,5 +38,17 @@ export const authorizationMiddleware: ExpressController = async (
       false,
       error?.statusCode || 401
     );
+  }
+};
+
+export const isAdminMiddleware: ExpressController = async (req, res, next) => {
+  try {
+    if (req.user?.role === "admin" || req.user?.role === "super admin") {
+      next();
+    }
+
+    throw createError("Forbidden", 403);
+  } catch (error: any) {
+    return sendResponse(res, "Forbidden", false, error?.statusCode || 403);
   }
 };

@@ -12,6 +12,9 @@ export const getAllProducts = async () => {
 
 export const addNewProduct = async (product: ProductType) => {
   try {
+    const images = product.images.map((image: any) => image.path);
+    product.images = images;
+
     const newProduct = await Product.create(product);
     return newProduct;
   } catch (error) {
