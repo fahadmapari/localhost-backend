@@ -4,11 +4,11 @@ import languages from "../assets/json/languages.v1.json" assert { type: "json" }
 const meetingPointSchema = z.object({
   country: z.string("Country is required."),
   city: z.string("City is required."),
-  latitude: z
+  latitude: z.coerce
     .number("Latitude is required.")
     .min(-90, "Latitude must be greater than or equal to -90")
     .max(90, "Latitude must be less than or equal to 90"),
-  longitude: z
+  longitude: z.coerce
     .number("Longitude is required.")
     .min(-180, "Longitude must be greater than or equal to -180")
     .max(180, "Longitude must be less than or equal to 180"),
@@ -17,24 +17,18 @@ const meetingPointSchema = z.object({
 });
 
 const endPointSchema = z.object({
-  latitude: z.number().optional(),
-  longitude: z.number().optional(),
+  latitude: z.coerce.number().optional(),
+  longitude: z.coerce.number().optional(),
   text: z.string().optional(),
 });
 
 const availabilitySchema = z.object({
-  startDate: z
-    .string()
-    .transform((val) => new Date(val))
-    .optional(),
-  endDate: z
-    .string()
-    .transform((val) => new Date(val))
-    .optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
   startTime: z.string().min(1, "Start time is required."),
   endTime: z.string().min(1, "End time is required."),
   duration: z.object({
-    value: z.number("Duration value is required."),
+    value: z.coerce.number("Duration value is required."),
     unit: z.enum(["minutes", "hours", "days"]),
   }),
 });
@@ -78,7 +72,7 @@ export const productZodSchema = z.object({
     "printed",
     "e-voucher accepted",
   ]),
-  maxPax: z
+  maxPax: z.coerce
     .number("Max pax is required.")
     .positive("Max pax must be a positive number."),
   meetingPoint: meetingPointSchema,
@@ -110,31 +104,29 @@ export const productZodSchema = z.object({
     .min(1, "At least one image is required."),
   priceModel: z.enum(["fixed rate", "per pax"]),
   currency: z.enum(["USD", "EUR", "GBP", "INR"]),
-  b2bRateInstant: z.number("B2B Instant rate is required."),
-  b2bExtraHourSupplementInsant: z.number().optional(),
-  b2bRateOnRequest: z.number("B2B On Request rate is required."),
-  b2bExtraHourSupplementOnRequest: z.number().optional(),
+  b2bRateInstant: z.coerce.number("B2B Instant rate is required."),
+  b2bExtraHourSupplementInsant: z.coerce.number().optional(),
+  b2bRateOnRequest: z.coerce.number("B2B On Request rate is required."),
+  b2bExtraHourSupplementOnRequest: z.coerce.number().optional(),
 
-  b2cRateInstant: z.number("B2C Instant rate is required."),
-  b2cExtraHourSupplementInstant: z.number().optional(),
-  b2cRateOnRequest: z.number("B2C On Request rate is required."),
-  b2cExtraHourSupplementOnRequest: z.number().optional(),
-  closedDates: z.array(z.string().transform((val) => new Date(val))).optional(),
-  holidayDates: z
-    .array(z.string().transform((val) => new Date(val)))
-    .optional(),
+  b2cRateInstant: z.coerce.number("B2C Instant rate is required."),
+  b2cExtraHourSupplementInstant: z.coerce.number().optional(),
+  b2cRateOnRequest: z.coerce.number("B2C On Request rate is required."),
+  b2cExtraHourSupplementOnRequest: z.coerce.number().optional(),
+  closedDates: z.array(z.coerce.date()).optional(),
+  holidayDates: z.array(z.coerce.date()).optional(),
 
-  publicHolidaySupplementPercent: z.number(),
-  weekendSupplementPercent: z.number(),
+  publicHolidaySupplementPercent: z.coerce.number(),
+  weekendSupplementPercent: z.coerce.number(),
   availability: availabilitySchema,
   cancellationTerms: z
     .array(z.string())
     .min(1, "At least one cancellation term is required."),
   realease: z.string().min(1, "Realease is required."),
-  isB2B: z.boolean(),
-  isB2C: z.boolean(),
-  overridePriceFromContract: z.boolean(),
-  isBookingPerProduct: z.boolean(),
+  isB2B: z.coerce.boolean(),
+  isB2C: z.coerce.boolean(),
+  overridePriceFromContract: z.coerce.boolean(),
+  isBookingPerProduct: z.coerce.boolean(),
 });
 
 export type ProductType = z.infer<typeof productZodSchema>;
