@@ -1,5 +1,4 @@
 import mongoose, { InferSchemaType } from "mongoose";
-import { required } from "zod/v4/core/util.cjs";
 
 const meetingPointSchema = new mongoose.Schema({
   country: {
@@ -24,6 +23,8 @@ const meetingPointSchema = new mongoose.Schema({
   },
   pickupInstructions: {
     type: [String],
+    required: false,
+    default: [],
   },
 });
 
@@ -124,6 +125,8 @@ const productSchema = new mongoose.Schema(
     },
     tourGuideLanguageInstant: {
       type: [String],
+      required: false,
+      default: [],
     },
     tourGuideLanguageOnRequest: {
       type: [String],
@@ -143,6 +146,8 @@ const productSchema = new mongoose.Schema(
     },
     excluded: {
       type: [String],
+      required: false,
+      default: [],
     },
     activitySuitableFor: {
       type: String,
@@ -197,6 +202,7 @@ const productSchema = new mongoose.Schema(
     },
     b2bExtraHourSupplementInsant: {
       type: Number,
+      required: false,
       default: 0,
     },
     b2bRateOnRequest: {
@@ -205,6 +211,7 @@ const productSchema = new mongoose.Schema(
     },
     b2bExtraHourSupplementOnRequest: {
       type: Number,
+      required: false,
       default: 0,
     },
     b2cRateInstant: {
@@ -213,6 +220,7 @@ const productSchema = new mongoose.Schema(
     },
     b2cExtraHourSupplementInstant: {
       type: Number,
+      required: false,
       default: 0,
     },
     b2cRateOnRequest: {
@@ -221,19 +229,26 @@ const productSchema = new mongoose.Schema(
     },
     b2cExtraHourSupplementOnRequest: {
       type: Number,
+      required: false,
       default: 0,
     },
     closedDates: {
       type: [Date],
+      required: false,
+      default: [],
     },
     holidayDates: {
       type: [Date],
+      required: false,
+      default: [],
     },
     publicHolidaySupplementPercent: {
       type: Number,
+      required: false,
     },
     weekendSupplementPercent: {
       type: Number,
+      required: false,
     },
     availability: availabilitySchema,
 
@@ -244,25 +259,30 @@ const productSchema = new mongoose.Schema(
 
     realease: {
       type: String,
+      required: true,
     },
 
     isB2B: {
       type: Boolean,
+      required: true,
       default: true,
     },
 
     isB2C: {
       type: Boolean,
-      default: false,
+      required: true,
+      default: true,
     },
 
     overridePriceFromContract: {
       type: Boolean,
-      default: true,
+      required: true,
+      default: false,
     },
 
     isBookingPerProduct: {
       type: Boolean,
+      required: true,
       default: false,
     },
   },

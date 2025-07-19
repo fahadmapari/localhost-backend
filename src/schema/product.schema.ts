@@ -131,18 +131,6 @@ export const productZodSchema = z.object({
       )
       .min(1, "At least one tag is required.")
   ),
-  images: z
-    .array(
-      z.object().transform((val) =>
-        z
-          .file(val)
-          .mime(["image/jpeg", "image/png", "image/webp"], {
-            error: "Only JPG, PNG, and WebP images are allowed.",
-          })
-          .max(1024 * 1024 * 5, "Image size must be less than 5MB.")
-      )
-    )
-    .min(1, "At least one image is required."),
   priceModel: z.enum(["fixed rate", "per pax"]),
   currency: z.enum(["USD", "EUR", "GBP", "INR"]),
   b2bRateInstant: z.coerce.number("B2B Instant rate is required."),

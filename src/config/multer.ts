@@ -1,26 +1,17 @@
-import { randomUUID } from "crypto";
 import multer from "multer";
 
-import path, { dirname, resolve } from "path";
-import { fileURLToPath } from "url";
+import path from "path";
+// import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = dirname(__filename);
 
-const uploadPath = resolve(__dirname, "..", "static/product-images");
+// const uploadPath = resolve(__dirname, "..", "static/product-images");
 
-const diskStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadPath); // Ensure this folder exists
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = "product-" + randomUUID() + Date.now();
-    cb(null, uniqueSuffix + "-" + file.originalname);
-  },
-});
+const storage = multer.memoryStorage();
 
 export const upload = multer({
-  storage: diskStorage,
+  storage: storage,
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|webp/;
     const extname = allowedTypes.test(

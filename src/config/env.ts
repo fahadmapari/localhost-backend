@@ -15,4 +15,8 @@ export const {
   REDIS_TOKEN,
   JWT_REFRESH_SECRET,
   JWT_REFRESH_EXP_IN,
-} = process.env;
+  AWS_ACCESS_KEY_ID,
+  AWS_SECRET_ACCESS_KEY,
+  AWS_REGION,
+  S3_BUCKET_NAME,
+} = process.env as Record<string, string>;

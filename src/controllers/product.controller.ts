@@ -1,8 +1,13 @@
 import { productZodSchema } from "../schema/product.schema";
-import { addNewProduct, getAllProducts } from "../services/product.service";
+import {
+  addNewProduct,
+  getAllProducts,
+  uploadProductImages,
+} from "../services/product.service";
 import { ExpressController } from "../types/controller.types";
 import { sendResponse } from "../utils/controller";
 import { parseNestedObject } from "../utils/common";
+import { createError } from "../utils/errorHandlers";
 
 export const getProducts: ExpressController = async (req, res, next) => {
   try {
@@ -17,12 +22,12 @@ export const getProducts: ExpressController = async (req, res, next) => {
 
 export const addProduct: ExpressController = async (req, res, next) => {
   try {
+    if (!req.files || req.files.length === 0) {
+      throw createError("No files uploaded", 400);
+    }
     const parsedObject = parseNestedObject(req.body);
 
-    const parsedBody = productZodSchema.safeParse({
-      ...parsedObject,
-      images: req.files,
-    });
+    const parsedBody = productZodSchema.safeParse(parsedObject);
 
     if (!parsedBody.success) {
       console.log(parsedBody.error);
@@ -31,7 +36,12 @@ export const addProduct: ExpressController = async (req, res, next) => {
       });
     }
 
-    const newProduct = await addNewProduct(parsedBody.data);
+    const images = await uploadProductImages(
+      req.files as Express.Multer.File[],
+      parsedBody.data.title
+    );
+
+    const newProduct = await addNewProduct(parsedBody.data, images);
 
     sendResponse(res, "Product added successfully", true, 200, {
       product: newProduct,
