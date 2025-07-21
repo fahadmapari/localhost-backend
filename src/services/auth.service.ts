@@ -73,10 +73,19 @@ export const signupUser = async (
       }
     );
 
-    await redisClient.set(`refresh:${jti}`, newUser[0]._id.toString(), {
-      ex: 30 * 24 * 60 * 60, // 30 days
-      nx: true, // Only set if not exists
-    });
+    await redisClient.set(
+      `refresh:${jti}`,
+      {
+        userId: newUser[0]._id.toString(),
+        name: newUser[0].name,
+        role: newUser[0].role,
+        email: newUser[0].email,
+      },
+      {
+        ex: 30 * 24 * 60 * 60, // 30 days
+        nx: true, // Only set if not exists
+      }
+    );
 
     await session.commitTransaction();
 
@@ -148,10 +157,19 @@ export const siginInUser = async (
       }
     );
 
-    await redisClient.set(`refresh:${jti}`, foundUser._id.toString(), {
-      ex: 30 * 24 * 60 * 60, // 30 days
-      nx: true, // Only set if not exists
-    });
+    await redisClient.set(
+      `refresh:${jti}`,
+      {
+        userId: foundUser._id.toString(),
+        name: foundUser.name,
+        role: foundUser.role,
+        email: foundUser.email,
+      },
+      {
+        ex: 30 * 24 * 60 * 60, // 30 days
+        nx: true, // Only set if not exists
+      }
+    );
 
     return {
       accessToken,
@@ -171,9 +189,14 @@ export const refreshAccessToken = async (refreshToken: string) => {
   try {
     const decoded: any = jwt.verify(refreshToken, JWT_REFRESH_SECRET!);
 
-    const exists = await redisClient.get(`refresh:${decoded?.jti}`);
+    const exists = (await redisClient.get(`refresh:${decoded?.jti}`)) as {
+      userId: string;
+      name: string;
+      role: string;
+      email: string;
+    };
 
-    if (!exists || exists !== decoded.userId) {
+    if (!exists || exists.userId !== decoded.userId) {
       throw createError("Invalid token", 401);
     }
 
@@ -188,7 +211,7 @@ export const refreshAccessToken = async (refreshToken: string) => {
       }
     );
 
-    return accessToken;
+    return { accessToken, user: exists };
   } catch (error: any) {
     if (
       error?.message === "jwt expired" ||

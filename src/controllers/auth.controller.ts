@@ -89,9 +89,9 @@ export const refreshToken: ExpressController = async (req, res, next) => {
       return sendResponse(res, "Refresh token is required", false, 401);
     }
 
-    const accessToken = await refreshAccessToken(refreshToken);
+    const data = await refreshAccessToken(refreshToken);
 
-    res.cookie("accessToken", accessToken, {
+    res.cookie("accessToken", data.accessToken, {
       httpOnly: true,
       secure: NODE_ENV === "production",
       sameSite: NODE_ENV === "production" ? "strict" : "lax",
@@ -99,7 +99,8 @@ export const refreshToken: ExpressController = async (req, res, next) => {
     });
 
     sendResponse(res, "Token refreshed successfully", true, 200, {
-      accessToken,
+      accessToken: data.accessToken,
+      user: data.user,
     });
   } catch (error) {
     next(error);
