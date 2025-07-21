@@ -99,7 +99,7 @@ export const siginInUser = async (
 ): Promise<{
   accessToken: string;
   refreshToken: string;
-  user: { name: string; email: string };
+  user: { name: string; email: string; role: string };
 }> => {
   try {
     const foundUser = await User.findOne({
@@ -159,6 +159,7 @@ export const siginInUser = async (
       user: {
         email: foundUser.email,
         name: foundUser.name,
+        role: foundUser.role,
       },
     };
   } catch (error) {
