@@ -9,8 +9,9 @@ import { ProductType } from "../schema/product.schema";
 
 export const getAllProducts = async () => {
   try {
-    const products = await Product.find().sort({ createdAt: -1 });
-    return products;
+    const products = await Product.find().sort({ createdAt: -1 }).lean();
+    const productsCount = await Product.estimatedDocumentCount();
+    return { products, totalProducts: productsCount };
   } catch (error) {
     throw error;
   }

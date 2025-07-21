@@ -20,3 +20,8 @@ export function parseNestedObject<T = any>(obj: Record<string, any>): T {
 
   return result as T;
 }
+
+export function timeToMinutes(timeStr: string): number {
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  return hours * 60 + minutes;
+}

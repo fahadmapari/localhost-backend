@@ -10,7 +10,7 @@ export const sendResponse = (
   response.status(statusCode).json({
     success: success,
     message: message || (success ? "Request successful" : "Request failed"),
-    data: data,
+    data,
   });
   return;
 };

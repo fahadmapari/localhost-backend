@@ -1,5 +1,6 @@
 import { z } from "zod";
 import languages from "../assets/json/languages.v1.json" assert { type: "json" };
+import { timeToMinutes } from "../utils/common";
 
 function preprocessToArray<T extends z.ZodArray<z.ZodTypeAny>>(arraySchema: T) {
   return z.preprocess(
@@ -63,6 +64,15 @@ const availabilitySchema = z
     {
       error: "Start date must be before end date.",
       path: ["startDate"],
+    }
+  )
+  .refine(
+    (data) => {
+      return timeToMinutes(data.startTime) < timeToMinutes(data.endTime);
+    },
+    {
+      error: "Start time must be before end time.",
+      path: ["startTime"],
     }
   );
 

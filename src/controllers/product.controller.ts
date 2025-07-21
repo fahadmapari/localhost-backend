@@ -16,6 +16,7 @@ export const getProducts: ExpressController = async (req, res, next) => {
       products,
     });
   } catch (error) {
+    console.log(error);
     next(error);
   }
 };
