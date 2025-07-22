@@ -178,10 +178,58 @@ const productSchema = new mongoose.Schema(
       ],
       required: true,
     },
-
     images: {
       type: [String],
       required: true,
+    },
+
+    closedDates: {
+      type: [Date],
+      required: false,
+      default: [],
+    },
+    holidayDates: {
+      type: [Date],
+      required: false,
+      default: [],
+    },
+
+    availability: availabilitySchema,
+
+    cancellationTerms: {
+      type: [String],
+      required: true,
+    },
+
+    realease: {
+      type: String,
+      required: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+const Product = mongoose.model("Product", productSchema);
+
+const productVariantSchema = new mongoose.Schema(
+  {
+    baseProduct: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+    bookingType: {
+      type: String,
+      required: true,
+      enum: ["instant", "request"],
+      default: "instant",
+    },
+    tourGuideLanguage: {
+      type: String,
+      required: true,
+      default: [],
     },
 
     priceModel: {
@@ -232,16 +280,7 @@ const productSchema = new mongoose.Schema(
       required: false,
       default: 0,
     },
-    closedDates: {
-      type: [Date],
-      required: false,
-      default: [],
-    },
-    holidayDates: {
-      type: [Date],
-      required: false,
-      default: [],
-    },
+
     publicHolidaySupplementPercent: {
       type: Number,
       required: false,
@@ -249,17 +288,6 @@ const productSchema = new mongoose.Schema(
     weekendSupplementPercent: {
       type: Number,
       required: false,
-    },
-    availability: availabilitySchema,
-
-    cancellationTerms: {
-      type: [String],
-      required: true,
-    },
-
-    realease: {
-      type: String,
-      required: true,
     },
 
     isB2B: {
@@ -291,7 +319,14 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-const Product = mongoose.model("Product", productSchema);
+export const ProductVariant = mongoose.model(
+  "ProductVariant",
+  productVariantSchema
+);
+
+export type ProductVariantDocument = InferSchemaType<
+  typeof productVariantSchema
+>;
 
 export type ProductDocument = InferSchemaType<typeof productSchema>;
 

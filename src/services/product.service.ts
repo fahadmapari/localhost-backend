@@ -1,5 +1,8 @@
 import multer from "multer";
-import Product, { ProductDocument } from "../models/product.model";
+import Product, {
+  ProductDocument,
+  ProductVariant,
+} from "../models/product.model";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { S3_BUCKET_NAME } from "../config/env";
 import { randomUUID } from "crypto";
@@ -9,8 +12,8 @@ import { ProductType } from "../schema/product.schema";
 
 export const getAllProducts = async () => {
   try {
-    const products = await Product.find().sort({ createdAt: -1 }).lean();
-    const productsCount = await Product.estimatedDocumentCount();
+    const products = await ProductVariant.find().sort({ createdAt: -1 }).lean();
+    const productsCount = await ProductVariant.estimatedDocumentCount();
     return { products, totalProducts: productsCount };
   } catch (error) {
     throw error;
@@ -20,6 +23,21 @@ export const getAllProducts = async () => {
 export const addNewProduct = async (product: ProductType, images: string[]) => {
   try {
     const newProduct = await Product.create({ ...product, images });
+    const instantProducts = product.tourGuideLanguageInstant?.map((p) => ({
+      ...product,
+      baseProduct: newProduct._id,
+      tourGuideLanguage: p,
+    }));
+    const onRequestProducts = product.tourGuideLanguageOnRequest?.map((p) => ({
+      ...product,
+      baseProduct: newProduct._id,
+      tourGuideLanguage: p,
+    }));
+
+    const productVariants = [instantProducts, onRequestProducts].flat();
+
+    await ProductVariant.insertMany(productVariants);
+
     return newProduct;
   } catch (error) {
     throw error;

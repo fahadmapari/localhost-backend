@@ -43,7 +43,6 @@ export const authorizationMiddleware: ExpressController = async (
 
 export const isAdminMiddleware: ExpressController = async (req, res, next) => {
   try {
-    console.log(req.user);
     if (req.user?.role === "admin" || req.user?.role === "super admin") {
       return next();
     }
