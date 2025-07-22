@@ -12,7 +12,10 @@ import { ProductType } from "../schema/product.schema";
 
 export const getAllProducts = async () => {
   try {
-    const products = await ProductVariant.find().sort({ createdAt: -1 }).lean();
+    const products = await ProductVariant.find()
+      .sort({ createdAt: -1 })
+      .populate("baseProduct")
+      .lean();
     const productsCount = await ProductVariant.estimatedDocumentCount();
     return { products, totalProducts: productsCount };
   } catch (error) {

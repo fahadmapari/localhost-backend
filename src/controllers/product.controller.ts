@@ -13,7 +13,7 @@ export const getProducts: ExpressController = async (req, res, next) => {
   try {
     const products = await getAllProducts();
     sendResponse(res, "Products fetched successfully", true, 200, {
-      products,
+      productsData: products,
     });
   } catch (error) {
     console.log(error);
