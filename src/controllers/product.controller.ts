@@ -11,7 +11,8 @@ import { createError } from "../utils/errorHandlers";
 
 export const getProducts: ExpressController = async (req, res, next) => {
   try {
-    const products = await getAllProducts();
+    const { page = 0, limit = 10 } = req.query;
+    const products = await getAllProducts(Number(page), Number(limit));
     sendResponse(res, "Products fetched successfully", true, 200, {
       productsData: products,
     });

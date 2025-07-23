@@ -10,10 +10,12 @@ import path from "path";
 import s3Client from "../config/s3";
 import { ProductType } from "../schema/product.schema";
 
-export const getAllProducts = async () => {
+export const getAllProducts = async (page: number, limit: number) => {
   try {
     const products = await ProductVariant.find()
       .sort({ createdAt: -1 })
+      .skip(page * limit)
+      .limit(limit)
       .populate("baseProduct")
       .lean();
     const productsCount = await ProductVariant.estimatedDocumentCount();
