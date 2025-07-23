@@ -31,15 +31,33 @@ export const fetchProductMetrics = async () => {
   }
 };
 
-export const getAllProducts = async (page: number, limit: number) => {
+export const getAllProducts = async (
+  page: number,
+  limit: number,
+  bookingType: string
+) => {
   try {
-    const products = await ProductVariant.find()
+    const filters: Record<string, any> = {};
+
+    if (bookingType === "all") {
+      filters.bookingType = { $in: ["instant", "request"] };
+    }
+
+    if (bookingType === "instant") {
+      filters.bookingType = "instant";
+    }
+
+    if (bookingType === "request") {
+      filters.bookingType = "request";
+    }
+
+    const products = await ProductVariant.find(filters)
       .sort({ createdAt: -1 })
       .skip(page * limit)
       .limit(limit)
       .populate("baseProduct")
       .lean();
-    const productsCount = await ProductVariant.estimatedDocumentCount();
+    const productsCount = await ProductVariant.countDocuments(filters).lean();
     return { products, totalProducts: productsCount };
   } catch (error) {
     throw error;
