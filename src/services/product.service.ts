@@ -31,11 +31,13 @@ export const addNewProduct = async (product: ProductType, images: string[]) => {
     const instantProducts = product.tourGuideLanguageInstant?.map((p) => ({
       ...product,
       baseProduct: newProduct._id,
+      bookingType: "instant",
       tourGuideLanguage: p,
     }));
     const onRequestProducts = product.tourGuideLanguageOnRequest?.map((p) => ({
       ...product,
       baseProduct: newProduct._id,
+      isBookingPerProduct: "request",
       tourGuideLanguage: p,
     }));
 

@@ -117,12 +117,7 @@ const productSchema = new mongoose.Schema(
       enum: ["english"],
       default: "english",
     },
-    bookingType: {
-      type: String,
-      required: true,
-      enum: ["instant", "request"],
-      default: "instant",
-    },
+
     tourGuideLanguageInstant: {
       type: [String],
       required: false,
@@ -224,7 +219,6 @@ const productVariantSchema = new mongoose.Schema(
       type: String,
       required: true,
       enum: ["instant", "request"],
-      default: "instant",
     },
     tourGuideLanguage: {
       type: String,

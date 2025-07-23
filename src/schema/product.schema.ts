@@ -90,7 +90,6 @@ export const productZodSchema = z.object({
     z.array(z.string()).min(1, "At least one 'will learn' item is required.")
   ),
   tourTextLanguage: z.enum(["english"]),
-  bookingType: z.enum(["instant", "request"]),
   tourGuideLanguageInstant: preprocessToArray(
     z.array(z.enum([...Object.values(languages)]))
   ).optional(),
