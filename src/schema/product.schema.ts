@@ -56,6 +56,14 @@ const availabilitySchema = z
       unit: z.enum(["minutes", "hours", "days"]),
     }),
   })
+  .transform((data) => {
+    // If no start or end date is provided, and isAlwaysAvailable is not already set,
+    // default it to true.
+    if (data.startDate === undefined && data.endDate === undefined) {
+      return { ...data, isAlwaysAvailable: true };
+    }
+    return data;
+  })
   .refine(
     (data) => {
       if (!data.startDate || !data.endDate) return true;

@@ -41,6 +41,11 @@ const endPointSchema = new mongoose.Schema({
 });
 
 const availabilitySchema = new mongoose.Schema({
+  isAlwaysAvailable: {
+    type: Boolean,
+    required: true,
+    default: false,
+  },
   startDate: {
     type: Date,
   },

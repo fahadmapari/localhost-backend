@@ -1,6 +1,7 @@
 import { productZodSchema } from "../schema/product.schema";
 import {
   addNewProduct,
+  fetchProductMetrics,
   getAllProducts,
   uploadProductImages,
 } from "../services/product.service";
@@ -16,6 +17,16 @@ export const getProducts: ExpressController = async (req, res, next) => {
     sendResponse(res, "Products fetched successfully", true, 200, {
       productsData: products,
     });
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
+
+export const getProductMetrics: ExpressController = async (req, res, next) => {
+  try {
+    const metrics = await fetchProductMetrics();
+    sendResponse(res, "Metrics fetched successfully", true, 200, metrics);
   } catch (error) {
     console.log(error);
     next(error);

@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { addProduct, getProducts } from "../controllers/product.controller";
+import {
+  addProduct,
+  getProductMetrics,
+  getProducts,
+} from "../controllers/product.controller";
 import { upload } from "../config/multer";
 import {
   authorizationMiddleware,
@@ -9,6 +13,13 @@ import {
 const productRouter = Router();
 
 productRouter.get("/", authorizationMiddleware, isAdminMiddleware, getProducts);
+
+productRouter.get(
+  "/metrics",
+  authorizationMiddleware,
+  isAdminMiddleware,
+  getProductMetrics
+);
 
 productRouter.post(
   "/",

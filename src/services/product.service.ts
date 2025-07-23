@@ -10,6 +10,27 @@ import path from "path";
 import s3Client from "../config/s3";
 import { ProductType } from "../schema/product.schema";
 
+export const fetchProductMetrics = async () => {
+  try {
+    const totalProductsCount =
+      await ProductVariant.estimatedDocumentCount().lean();
+    const totalInstantProductsCount = await ProductVariant.countDocuments({
+      bookingType: "instant",
+    }).lean();
+    const totalOnRequestProductsCount = await ProductVariant.countDocuments({
+      bookingType: "request",
+    }).lean();
+
+    return {
+      totalProductsCount,
+      totalInstantProductsCount,
+      totalOnRequestProductsCount,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const getAllProducts = async (page: number, limit: number) => {
   try {
     const products = await ProductVariant.find()
@@ -37,7 +58,7 @@ export const addNewProduct = async (product: ProductType, images: string[]) => {
     const onRequestProducts = product.tourGuideLanguageOnRequest?.map((p) => ({
       ...product,
       baseProduct: newProduct._id,
-      isBookingPerProduct: "request",
+      bookingType: "request",
       tourGuideLanguage: p,
     }));
 
