@@ -13,9 +13,10 @@ import { createError } from "../utils/errorHandlers";
 export const getProducts: ExpressController = async (req, res, next) => {
   try {
     const { page = 0, limit = 10, bookingType = "all" } = req.query;
+
     const products = await getAllProducts(
       Number(page),
-      Number(limit),
+      Number(limit) < 100 ? Number(limit) : 100,
       bookingType.toString()
     );
 
