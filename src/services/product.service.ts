@@ -7,6 +7,13 @@ import s3Client from "../config/s3";
 import { ProductType } from "../schema/product.schema";
 import dayjs from "dayjs";
 
+export const findProductById = async (id: string) => {
+  const prduct = await ProductVariant.findById(id)
+    .populate("baseProduct")
+    .lean();
+  return prduct;
+};
+
 export const fetchProductMetrics = async () => {
   try {
     const totalProductsCount =

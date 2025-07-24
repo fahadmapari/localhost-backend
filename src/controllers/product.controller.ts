@@ -2,6 +2,7 @@ import { productZodSchema } from "../schema/product.schema";
 import {
   addNewProduct,
   fetchProductMetrics,
+  findProductById,
   getAllProducts,
   uploadProductImages,
 } from "../services/product.service";
@@ -9,6 +10,19 @@ import { ExpressController } from "../types/controller.types";
 import { sendResponse } from "../utils/controller";
 import { parseNestedObject } from "../utils/common";
 import { createError } from "../utils/errorHandlers";
+
+export const getProductById: ExpressController = async (req, res, next) => {
+  try {
+    if (!req.params.id) {
+      throw createError("Product id is required", 400);
+    }
+    const product = await findProductById(req.params.id);
+
+    sendResponse(res, "Product fetched successfully", true, 200, product);
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const getProducts: ExpressController = async (req, res, next) => {
   try {

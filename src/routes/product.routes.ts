@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   addProduct,
+  getProductById,
   getProductMetrics,
   getProducts,
 } from "../controllers/product.controller";
@@ -13,6 +14,13 @@ import {
 const productRouter = Router();
 
 productRouter.get("/", authorizationMiddleware, isAdminMiddleware, getProducts);
+
+productRouter.get(
+  "/:id",
+  authorizationMiddleware,
+  isAdminMiddleware,
+  getProductById
+);
 
 productRouter.get(
   "/metrics",
