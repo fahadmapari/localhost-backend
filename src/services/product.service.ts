@@ -28,7 +28,9 @@ export const fetchProductMetrics = async () => {
       createdAt: {
         $gte: yearBackDate,
       },
-    }).lean();
+    })
+      .select("createdAt")
+      .lean();
 
     const totalUniqueProductCount =
       await Product.estimatedDocumentCount().lean();
