@@ -1,8 +1,4 @@
-import multer from "multer";
-import Product, {
-  ProductDocument,
-  ProductVariant,
-} from "../models/product.model";
+import Product, { ProductVariant } from "../models/product.model";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { S3_BUCKET_NAME } from "../config/env";
 import { randomUUID } from "crypto";
