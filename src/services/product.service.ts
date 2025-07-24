@@ -9,6 +9,7 @@ import { randomUUID } from "crypto";
 import path from "path";
 import s3Client from "../config/s3";
 import { ProductType } from "../schema/product.schema";
+import dayjs from "dayjs";
 
 export const fetchProductMetrics = async () => {
   try {
@@ -21,10 +22,23 @@ export const fetchProductMetrics = async () => {
       bookingType: "request",
     }).lean();
 
+    const yearBackDate = dayjs().subtract(1, "year").toDate();
+
+    const last12MonthProducts = await Product.find({
+      createdAt: {
+        $gte: yearBackDate,
+      },
+    }).lean();
+
+    const totalUniqueProductCount =
+      await Product.estimatedDocumentCount().lean();
+
     return {
       totalProductsCount,
       totalInstantProductsCount,
       totalOnRequestProductsCount,
+      last12MonthProducts,
+      totalUniqueProductCount,
     };
   } catch (error) {
     throw error;
