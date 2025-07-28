@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   addProduct,
+  editProductById,
   getProductById,
   getProductMetrics,
   getProducts,
@@ -16,10 +17,17 @@ const productRouter = Router();
 productRouter.get("/", authorizationMiddleware, isAdminMiddleware, getProducts);
 
 productRouter.get(
-  "/:id",
+  "/edit/:id",
   authorizationMiddleware,
   isAdminMiddleware,
   getProductById
+);
+
+productRouter.post(
+  "/edit/:id",
+  authorizationMiddleware,
+  isAdminMiddleware,
+  editProductById
 );
 
 productRouter.get(

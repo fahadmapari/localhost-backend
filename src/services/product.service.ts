@@ -6,9 +6,25 @@ import path from "path";
 import s3Client from "../config/s3";
 import { ProductType } from "../schema/product.schema";
 import dayjs from "dayjs";
+import mongoose from "mongoose";
+
+export const editProductById = async (
+  id: string,
+  editedProduct: ProductType
+) => {
+  try {
+    const product = await ProductVariant.findByIdAndUpdate(id, editedProduct);
+
+    return product;
+  } catch (error) {
+    throw error;
+  }
+};
 
 export const findProductById = async (id: string) => {
-  const prduct = await ProductVariant.findById(id)
+  const prduct = await ProductVariant.findById({
+    _id: id,
+  })
     .populate("baseProduct")
     .lean();
   return prduct;
@@ -84,28 +100,40 @@ export const getAllProducts = async (
 };
 
 export const addNewProduct = async (product: ProductType, images: string[]) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    const newProduct = await Product.create({ ...product, images });
+    const newProduct = await Product.create([{ ...product, images }], {
+      session: session,
+    });
     const instantProducts = product.tourGuideLanguageInstant?.map((p) => ({
       ...product,
-      baseProduct: newProduct._id,
+      baseProduct: newProduct[0]._id,
       bookingType: "instant",
       tourGuideLanguage: p,
     }));
     const onRequestProducts = product.tourGuideLanguageOnRequest?.map((p) => ({
       ...product,
-      baseProduct: newProduct._id,
+      baseProduct: newProduct[0]._id,
       bookingType: "request",
       tourGuideLanguage: p,
     }));
 
     const productVariants = [instantProducts, onRequestProducts].flat();
 
-    await ProductVariant.insertMany(productVariants);
+    await ProductVariant.insertMany(productVariants, {
+      session: session,
+    });
+
+    session.commitTransaction();
+    session.endSession;
 
     return newProduct;
   } catch (error) {
+    session.abortTransaction();
     throw error;
+  } finally {
+    session.endSession();
   }
 };
 
