@@ -1,4 +1,5 @@
 import mongoose, { InferSchemaType } from "mongoose";
+import { uppercase } from "zod";
 
 const meetingPointSchema = new mongoose.Schema({
   country: {
@@ -80,6 +81,49 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    tourTextLanguage: {
+      type: String,
+      required: true,
+      enum: ["english"],
+      default: "english",
+    },
+    tourGuideLanguageInstant: {
+      type: [String],
+      required: false,
+      default: [],
+    },
+    tourGuideLanguageOnRequest: {
+      type: [String],
+      required: true,
+    },
+
+    images: {
+      type: [String],
+      required: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+const Product = mongoose.model("Product", productSchema);
+
+const productVariantSchema = new mongoose.Schema(
+  {
+    url: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
+    productCode: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+      uppercase: true,
+    },
     serviceType: {
       type: String,
       required: true,
@@ -116,22 +160,22 @@ const productSchema = new mongoose.Schema(
       type: [String],
       required: true,
     },
-    tourTextLanguage: {
+    baseProduct: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+    bookingType: {
       type: String,
       required: true,
-      enum: ["english"],
-      default: "english",
+      enum: ["instant", "request"],
     },
-
-    tourGuideLanguageInstant: {
-      type: [String],
-      required: false,
+    tourGuideLanguage: {
+      type: String,
+      required: true,
       default: [],
     },
-    tourGuideLanguageOnRequest: {
-      type: [String],
-      required: true,
-    },
+
     mandatoryInformation: {
       type: [String],
       required: true,
@@ -178,11 +222,6 @@ const productSchema = new mongoose.Schema(
       ],
       required: true,
     },
-    images: {
-      type: [String],
-      required: true,
-    },
-
     closedDates: {
       type: [Date],
       required: false,
@@ -205,32 +244,6 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-  },
-  {
-    timestamps: true,
-  }
-);
-
-const Product = mongoose.model("Product", productSchema);
-
-const productVariantSchema = new mongoose.Schema(
-  {
-    baseProduct: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
-      required: true,
-    },
-    bookingType: {
-      type: String,
-      required: true,
-      enum: ["instant", "request"],
-    },
-    tourGuideLanguage: {
-      type: String,
-      required: true,
-      default: [],
-    },
-
     priceModel: {
       type: String,
       required: true,

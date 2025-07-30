@@ -1,5 +1,5 @@
 import Product, { ProductVariant } from "../models/product.model";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectsCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { S3_BUCKET_NAME } from "../config/env";
 import { randomUUID } from "crypto";
 import path from "path";
@@ -7,6 +7,9 @@ import s3Client from "../config/s3";
 import { ProductType } from "../schema/product.schema";
 import dayjs from "dayjs";
 import mongoose from "mongoose";
+import slug from "slug";
+import { nanoid } from "nanoid";
+import { PRODUCT_CODE_KEY_PREFIX } from "../config/constants";
 
 export const editProductById = async (
   id: string,
@@ -106,18 +109,32 @@ export const addNewProduct = async (product: ProductType, images: string[]) => {
     const newProduct = await Product.create([{ ...product, images }], {
       session: session,
     });
-    const instantProducts = product.tourGuideLanguageInstant?.map((p) => ({
-      ...product,
-      baseProduct: newProduct[0]._id,
-      bookingType: "instant",
-      tourGuideLanguage: p,
-    }));
-    const onRequestProducts = product.tourGuideLanguageOnRequest?.map((p) => ({
-      ...product,
-      baseProduct: newProduct[0]._id,
-      bookingType: "request",
-      tourGuideLanguage: p,
-    }));
+
+    const productTitle = slug(newProduct[0].title);
+
+    const instantProducts = product.tourGuideLanguageInstant?.map((p) => {
+      const productCode = PRODUCT_CODE_KEY_PREFIX + nanoid(6);
+      return {
+        ...product,
+        baseProduct: newProduct[0]._id,
+        bookingType: "instant",
+        tourGuideLanguage: p,
+        url: productTitle + "-" + productCode.toUpperCase(),
+        productCode: productCode.toUpperCase(),
+      };
+    });
+
+    const onRequestProducts = product.tourGuideLanguageOnRequest?.map((p) => {
+      const productCode = PRODUCT_CODE_KEY_PREFIX + nanoid(6);
+      return {
+        ...product,
+        baseProduct: newProduct[0]._id,
+        bookingType: "request",
+        tourGuideLanguage: p,
+        url: productTitle + "-" + productCode.toUpperCase(),
+        productCode: productCode.toUpperCase(),
+      };
+    });
 
     const productVariants = [instantProducts, onRequestProducts].flat();
 
@@ -131,9 +148,26 @@ export const addNewProduct = async (product: ProductType, images: string[]) => {
     return newProduct;
   } catch (error) {
     session.abortTransaction();
+    await deleteMultipleImages(images);
     throw error;
   } finally {
     session.endSession();
+  }
+};
+
+export const deleteMultipleImages = async (images: string[]) => {
+  try {
+    const command = new DeleteObjectsCommand({
+      Bucket: S3_BUCKET_NAME,
+      Delete: {
+        Objects: images.map((image) => ({ Key: image })),
+      },
+    });
+
+    const result = await s3Client.send(command);
+    return result;
+  } catch (err) {
+    console.error("Error deleting images:", err);
   }
 };
 

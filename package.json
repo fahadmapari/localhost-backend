@@ -26,6 +26,8 @@
     "mongoose": "^8.16.0",
     "morgan": "~1.9.1",
     "multer": "^2.0.2",
+    "nanoid": "^5.1.5",
+    "slug": "^11.0.0",
     "zod": "^4.0.5"
   },
   "devDependencies": {
@@ -39,6 +41,7 @@
     "@types/morgan": "^1.9.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.0.3",
+    "@types/slug": "^5.0.9",
     "@typescript-eslint/eslint-plugin": "^8.35.0",
     "@typescript-eslint/parser": "^8.35.0",
     "eslint": "^9.29.0",
