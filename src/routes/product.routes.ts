@@ -16,6 +16,14 @@ const productRouter = Router();
 
 productRouter.get("/", authorizationMiddleware, isAdminMiddleware, getProducts);
 
+productRouter.post(
+  "/",
+  authorizationMiddleware,
+  isAdminMiddleware,
+  upload.array("images"),
+  addProduct
+);
+
 productRouter.get(
   "/edit/:id",
   authorizationMiddleware,
@@ -23,8 +31,15 @@ productRouter.get(
   getProductById
 );
 
-productRouter.post(
+productRouter.put(
   "/edit/:id",
+  authorizationMiddleware,
+  isAdminMiddleware,
+  editProductById
+);
+
+productRouter.delete(
+  "/:id",
   authorizationMiddleware,
   isAdminMiddleware,
   editProductById
@@ -36,17 +51,5 @@ productRouter.get(
   isAdminMiddleware,
   getProductMetrics
 );
-
-productRouter.post(
-  "/",
-  authorizationMiddleware,
-  isAdminMiddleware,
-  upload.array("images"),
-  addProduct
-);
-
-productRouter.put("/:id", addProduct);
-
-productRouter.delete("/:id", addProduct);
 
 export default productRouter;
