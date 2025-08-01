@@ -24,6 +24,7 @@ export const updateProductById = async (
     const oldProduct = await ProductVariant.findById(editedProduct.id);
 
     if (oldProduct?.bookingType !== editedProduct.bookingType) {
+      // TODO: update base product array
       if (
         (editedProduct.bookingType === "instant" &&
           oldBaseProduct?.tourGuideLanguageInstant?.includes(
@@ -35,6 +36,26 @@ export const updateProductById = async (
           ))
       ) {
         throw createError("Product already exists", 400);
+      }
+
+      if (editedProduct.bookingType === "instant") {
+        await Product.findByIdAndUpdate(editedProduct.baseProductId, {
+          $push: {
+            tourGuideLanguageInstant: editedProduct.tourGuideLanguage,
+          },
+          $pull: {
+            tourGuideLanguageOnRequest: editedProduct.tourGuideLanguage,
+          },
+        });
+      } else {
+        await Product.findByIdAndUpdate(editedProduct.baseProductId, {
+          $push: {
+            tourGuideLanguageOnRequest: editedProduct.tourGuideLanguage,
+          },
+          $pull: {
+            tourGuideLanguageInstant: editedProduct.tourGuideLanguage,
+          },
+        });
       }
     }
 
