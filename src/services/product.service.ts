@@ -10,27 +10,82 @@ import mongoose from "mongoose";
 import slug from "slug";
 import { nanoid } from "nanoid";
 import { PRODUCT_CODE_KEY_PREFIX } from "../config/constants";
+import { EditedProduct } from "../types/product.types";
+import _ from "lodash";
+import { createError } from "../utils/errorHandlers";
 
-export const editProductById = async (
+export const updateProductById = async (
   id: string,
-  editedProduct: ProductType
+  editedProduct: EditedProduct,
+  files: Express.Multer.File[]
 ) => {
   try {
-    const product = await ProductVariant.findByIdAndUpdate(id, editedProduct);
+    const oldBaseProduct = await Product.findById(editedProduct.baseProductId);
+    const oldProduct = await ProductVariant.findById(editedProduct.id);
 
-    return product;
+    if (oldProduct?.bookingType !== editedProduct.bookingType) {
+      if (
+        (editedProduct.bookingType === "instant" &&
+          oldBaseProduct?.tourGuideLanguageInstant?.includes(
+            editedProduct.tourGuideLanguage
+          )) ||
+        (editedProduct.bookingType === "request" &&
+          oldBaseProduct?.tourGuideLanguageOnRequest?.includes(
+            editedProduct.tourGuideLanguage
+          ))
+      ) {
+        throw createError("Product already exists", 400);
+      }
+    }
+
+    const deletedImages =
+      editedProduct?.existingImages && editedProduct?.existingImages.length
+        ? _.difference(
+            oldBaseProduct?.images,
+            editedProduct?.existingImages || []
+          )
+        : [];
+
+    if (deletedImages.length > 0) {
+      await deleteMultipleImages(deletedImages);
+      await Product.findByIdAndUpdate(editedProduct.baseProductId, {
+        images: editedProduct.existingImages,
+      });
+    }
+
+    if (files.length > 0) {
+      const newUploadedImages = await uploadProductImages(
+        files,
+        editedProduct.title
+      );
+      await Product.updateOne(
+        { _id: editedProduct.baseProductId },
+        {
+          $push: {
+            images: { $each: newUploadedImages },
+          },
+        }
+      );
+    }
+
+    const updatedProduct = await ProductVariant.findByIdAndUpdate(
+      id,
+      editedProduct
+    );
+
+    return updatedProduct;
   } catch (error) {
     throw error;
   }
 };
 
 export const findProductById = async (id: string) => {
-  const prduct = await ProductVariant.findById({
+  const product = await ProductVariant.findById({
     _id: id,
   })
     .populate("baseProduct")
     .lean();
-  return prduct;
+  return product;
 };
 
 export const fetchProductMetrics = async () => {

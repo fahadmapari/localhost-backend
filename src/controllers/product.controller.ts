@@ -1,10 +1,14 @@
 import { ExpressController } from "./../types/controller.types";
-import { productZodSchema } from "../schema/product.schema";
+import {
+  editProductZodSchema,
+  productZodSchema,
+} from "../schema/product.schema";
 import {
   addNewProduct,
   fetchProductMetrics,
   findProductById,
   getAllProducts,
+  updateProductById,
   uploadProductImages,
 } from "../services/product.service";
 import { sendResponse } from "../utils/controller";
@@ -17,7 +21,21 @@ export const editProductById: ExpressController = async (req, res, next) => {
       throw createError("Product id is required", 400);
     }
 
-    const product = await findProductById(req.params.id);
+    const parsedObject = parseNestedObject(req.body);
+
+    const parsedBody = editProductZodSchema.safeParse(parsedObject);
+
+    if (parsedBody.error) {
+      return sendResponse(res, "Invalid Fields", false, 400, {
+        error: parsedBody.error,
+      });
+    }
+
+    const product = await updateProductById(
+      req.params.id,
+      parsedBody!.data,
+      req.files as Express.Multer.File[]
+    );
 
     sendResponse(res, "Product fetched successfully", true, 200, product);
   } catch (error) {

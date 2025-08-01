@@ -35,6 +35,7 @@ productRouter.put(
   "/edit/:id",
   authorizationMiddleware,
   isAdminMiddleware,
+  upload.array("images"),
   editProductById
 );
 

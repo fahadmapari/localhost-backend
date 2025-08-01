@@ -1,6 +1,7 @@
 import { z } from "zod";
 import languages from "../assets/json/languages.v1.json" assert { type: "json" };
 import { timeToMinutes } from "../utils/common";
+import { bo } from "@upstash/redis/zmscore-DzNHSWxc";
 
 function preprocessToArray<T extends z.ZodArray<z.ZodTypeAny>>(arraySchema: T) {
   return z.preprocess(
@@ -42,7 +43,7 @@ const meetingPointSchema = z.object({
 const endPointSchema = z.object({
   latitude: z.coerce.number().optional(),
   longitude: z.coerce.number().optional(),
-  text: z.string().optional(),
+  text: z.string(),
 });
 
 const availabilitySchema = z
@@ -98,6 +99,103 @@ export const productZodSchema = z.object({
     z.array(z.string()).min(1, "At least one 'will learn' item is required.")
   ),
   tourTextLanguage: z.enum(["english"]),
+  tourGuideLanguageInstant: preprocessToArray(
+    z.array(z.enum([...Object.values(languages)]))
+  ).optional(),
+  tourGuideLanguageOnRequest: preprocessToArray(
+    z
+      .array(z.enum([...Object.values(languages)]))
+      .min(1, "At least one 'tour guide language' item is required.")
+  ),
+  mandatoryInformation: preprocessToArray(
+    z
+      .array(z.string())
+      .min(1, "At least one mandatory information is required.")
+  ),
+  recommdendedInformation: preprocessToArray(
+    z
+      .array(z.string())
+      .min(1, "At least one recommended information is required.")
+  ),
+  included: preprocessToArray(
+    z.array(z.string()).min(1, "At least one included item is required.")
+  ),
+  excluded: preprocessToArray(
+    z.array(z.string()).min(1, "At least one excluded item is required.")
+  ),
+  activitySuitableFor: z.enum(["all", "adults", "children"]),
+  voucherType: z.enum([
+    "printed or e-voucher accepted",
+    "printed",
+    "e-voucher accepted",
+  ]),
+  maxPax: z.coerce
+    .number("Max pax is required.")
+    .positive("Max pax must be a positive number."),
+  meetingPoint: meetingPointSchema,
+  endPoint: endPointSchema.optional(),
+  tags: preprocessToArray(
+    z
+      .array(
+        z.enum([
+          "walk",
+          "museum",
+          "palace",
+          "science",
+          "technology",
+          "beer",
+          "christmas",
+        ])
+      )
+      .min(1, "At least one tag is required.")
+  ),
+  priceModel: z.enum(["fixed rate", "per pax"]),
+  currency: z.enum(["USD", "EUR", "GBP", "INR"]),
+  b2bRateInstant: z.coerce.number("B2B Instant rate is required."),
+  b2bExtraHourSupplementInsant: z.coerce.number().optional(),
+  b2bRateOnRequest: z.coerce.number("B2B On Request rate is required."),
+  b2bExtraHourSupplementOnRequest: z.coerce.number().optional(),
+
+  b2cRateInstant: z.coerce.number("B2C Instant rate is required."),
+  b2cExtraHourSupplementInstant: z.coerce.number().optional(),
+  b2cRateOnRequest: z.coerce.number("B2C On Request rate is required."),
+  b2cExtraHourSupplementOnRequest: z.coerce.number().optional(),
+  closedDates: preprocessToArray(z.array(z.coerce.date())).optional(),
+  holidayDates: preprocessToArray(z.array(z.coerce.date())).optional(),
+
+  publicHolidaySupplementPercent: z.coerce.number(),
+  weekendSupplementPercent: z.coerce.number(),
+  availability: availabilitySchema,
+  cancellationTerms: preprocessToArray(
+    z.array(z.string()).min(1, "At least one cancellation term is required.")
+  ),
+  realease: z.string().min(1, "Realease is required."),
+  isB2B: z.coerce.boolean(),
+  isB2C: z.coerce.boolean(),
+  overridePriceFromContract: z.coerce.boolean(),
+  isBookingPerProduct: z.coerce.boolean(),
+});
+
+export const editProductZodSchema = z.object({
+  productCode: z.string().min(1, "Product code is required."),
+  baseProductId: z.string().min(1, "Base product id is required."),
+  id: z.string().min(1, "Product id is required."),
+  title: z.string().min(1, "Title is required."),
+  serviceType: z.enum(["guide", "assistant"]),
+  tourType: z.enum(["shared", "private"]),
+  activityType: z.enum(["city tours"]),
+  subType: z.enum(["walking tours"]),
+  description: z.string().min(1, "Description is required."),
+  willSee: preprocessToArray(
+    z.array(z.string()).min(1, "At least one 'will see' item is required.")
+  ),
+  willLearn: preprocessToArray(
+    z.array(z.string()).min(1, "At least one 'will learn' item is required.")
+  ),
+  bookingType: z.enum(["instant", "request"]),
+  existingImages: preprocessToArray(z.array(z.string())).optional(),
+  tourTextLanguage: z.enum(["english"]),
+  tourGuideLanguage: z.string().min(1, "Tour guide language is required."),
   tourGuideLanguageInstant: preprocessToArray(
     z.array(z.enum([...Object.values(languages)]))
   ).optional(),
