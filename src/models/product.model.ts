@@ -1,5 +1,4 @@
 import mongoose, { InferSchemaType } from "mongoose";
-import { uppercase } from "zod";
 
 const meetingPointSchema = new mongoose.Schema({
   country: {
