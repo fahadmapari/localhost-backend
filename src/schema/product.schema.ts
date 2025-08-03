@@ -170,10 +170,26 @@ export const productZodSchema = z.object({
     z.array(z.string()).min(1, "At least one cancellation term is required.")
   ),
   realease: z.string().min(1, "Realease is required."),
-  isB2B: z.coerce.boolean(),
-  isB2C: z.coerce.boolean(),
-  overridePriceFromContract: z.coerce.boolean(),
-  isBookingPerProduct: z.coerce.boolean(),
+  isB2B: z.union([
+    z.literal("true").transform(() => true),
+    z.literal("false").transform(() => false),
+    z.boolean(),
+  ]),
+  isB2C: z.union([
+    z.literal("true").transform(() => true),
+    z.literal("false").transform(() => false),
+    z.boolean(),
+  ]),
+  overridePriceFromContract: z.union([
+    z.literal("true").transform(() => true),
+    z.literal("false").transform(() => false),
+    z.boolean(),
+  ]),
+  isBookingPerProduct: z.union([
+    z.literal("true").transform(() => true),
+    z.literal("false").transform(() => false),
+    z.boolean(),
+  ]),
 });
 
 export const editProductZodSchema = z.object({
@@ -267,10 +283,26 @@ export const editProductZodSchema = z.object({
     z.array(z.string()).min(1, "At least one cancellation term is required.")
   ),
   realease: z.string().min(1, "Realease is required."),
-  isB2B: z.coerce.boolean(),
-  isB2C: z.coerce.boolean(),
-  overridePriceFromContract: z.coerce.boolean(),
-  isBookingPerProduct: z.coerce.boolean(),
+  isB2B: z.union([
+    z.literal("true").transform(() => true),
+    z.literal("false").transform(() => false),
+    z.boolean(),
+  ]),
+  isB2C: z.union([
+    z.literal("true").transform(() => true),
+    z.literal("false").transform(() => false),
+    z.boolean(),
+  ]),
+  overridePriceFromContract: z.union([
+    z.literal("true").transform(() => true),
+    z.literal("false").transform(() => false),
+    z.boolean(),
+  ]),
+  isBookingPerProduct: z.union([
+    z.literal("true").transform(() => true),
+    z.literal("false").transform(() => false),
+    z.boolean(),
+  ]),
 });
 
 export type ProductType = z.infer<typeof productZodSchema>;

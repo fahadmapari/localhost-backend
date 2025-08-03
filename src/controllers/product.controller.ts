@@ -33,7 +33,7 @@ export const editProductById: ExpressController = async (req, res, next) => {
 
     const product = await updateProductById(
       req.params.id,
-      parsedBody!.data,
+      parsedBody.data,
       req.files as Express.Multer.File[]
     );
 
