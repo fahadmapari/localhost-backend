@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { required } from "zod/v4/core/util.cjs";
 
 const profileSchema = new mongoose.Schema(
   {
