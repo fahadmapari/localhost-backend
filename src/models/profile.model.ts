@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { required } from "zod/v4/core/util.cjs";
 
 const profileSchema = new mongoose.Schema(
   {
@@ -6,6 +7,11 @@ const profileSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    status: {
+      type: Boolean,
+      required: true,
+      default: false,
     },
   },
   {
@@ -131,6 +137,10 @@ const clientProfileSchema = new mongoose.Schema({
 
   position: {
     type: String,
+  },
+  boardedFromOnlinePortal: {
+    type: Boolean,
+    default: true,
   },
   companyInformation: clientCompanySchema,
 });

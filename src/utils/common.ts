@@ -1,3 +1,4 @@
+import bcrypt from "bcrypt";
 // to make key.key to key { key: key }
 export function parseNestedObject<T = any>(obj: Record<string, any>): T {
   const result: Record<string, any> = {};
@@ -24,4 +25,8 @@ export function parseNestedObject<T = any>(obj: Record<string, any>): T {
 export function timeToMinutes(timeStr: string): number {
   const [hours, minutes] = timeStr.split(":").map(Number);
   return hours * 60 + minutes;
+}
+
+export function hashPassword(password: string) {
+  return bcrypt.hash(password, 10);
 }
