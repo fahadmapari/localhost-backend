@@ -6,11 +6,11 @@ export const clientSchema = z.object({
   email: z.email("Email is invalid."),
   mobile: z.object({
     code: z.string().min(1, "Mobile code is required."),
-    number: z.number().min(1, "Mobile number is required."),
+    number: z.string().min(1, "Mobile number is required."),
   }),
   whatsapp: z.object({
     code: z.string().min(1, "Whatsapp code is required."),
-    number: z.number().min(1, "Whatsapp number is required."),
+    number: z.string().min(1, "Whatsapp number is required."),
   }),
   teamsId: z.string().min(1, "Teams ID is required."),
   password: z
@@ -24,7 +24,7 @@ export const clientSchema = z.object({
 
   companyName: z.string().min(1, "Company name is required."),
   companyAddress: z.string().min(1, "Company address is required."),
-  companyZipCode: z.number("Company zip code is required."),
+  companyZipCode: z.string("Company zip code is required."),
   companyCountry: z.string().min(1, "Company country is required."),
   companyCity: z.string().min(1, "Company city is required."),
   companyPreferredPaymentMethod: z.enum([
@@ -34,11 +34,11 @@ export const clientSchema = z.object({
   ]),
   companyVATNumber: z.string().min(1, "Company VAT number is required."),
   companyPaymentAgreement: z.enum(["Pre-Service", "Post-Service"]),
-  companyTelephone: z.number().min(1, "Company telephone number is required."),
+  companyTelephone: z.string().min(1, "Company telephone number is required."),
   companyTelephoneCode: z
     .string()
     .min(1, "Company telephone code is required."),
-  companyFax: z.number().optional(),
+  companyFax: z.string().optional(),
   companyFaxCode: z.string().optional(),
   companyWebsite: z.url().optional(),
   companyEmail: z.email().optional(),
