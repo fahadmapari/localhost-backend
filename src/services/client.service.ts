@@ -1,9 +1,22 @@
 import { clientSchema } from "../schema/client.schema";
-import { email, z } from "zod";
+import { z } from "zod";
 import { hashPassword } from "../utils/common";
 import { ClientProfile } from "../models/profile.model";
-import { last } from "lodash";
 import User from "../models/user.model";
+
+export const getClientListService = async (page: number, limit: number) => {
+  try {
+    const clients = await ClientProfile.find()
+      .sort({ createdAt: -1 })
+      .skip(page * limit)
+      .limit(limit)
+      .populate("userId")
+      .lean();
+    return clients;
+  } catch (error) {
+    throw error;
+  }
+};
 
 export const registerClientService = async (
   data: z.infer<typeof clientSchema>

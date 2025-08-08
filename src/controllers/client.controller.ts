@@ -1,7 +1,32 @@
 import { clientSchema } from "../schema/client.schema";
-import { registerClientService } from "../services/client.service";
+import {
+  getClientListService,
+  registerClientService,
+} from "../services/client.service";
 import { ExpressController } from "../types/controller.types";
 import { sendResponse } from "../utils/controller";
+
+export const getClientListController: ExpressController = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    const { page = 0, limit = 10 as number } = req.query;
+
+    const clients = await getClientListService(page as number, limit as number);
+
+    return sendResponse(
+      res,
+      "Clients fetched successfully",
+      true,
+      200,
+      clients
+    );
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const createClientController: ExpressController = async (
   req,
