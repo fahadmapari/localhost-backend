@@ -133,12 +133,28 @@ export const fetchProductMetrics = async () => {
     const totalUniqueProductCount =
       await Product.estimatedDocumentCount().lean();
 
+    const topCountries = await ProductVariant.aggregate([
+      {
+        $group: {
+          _id: "$meetingPoint.country",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { count: -1 },
+      },
+      {
+        $limit: 10,
+      },
+    ]).exec();
+
     return {
       totalProductsCount,
       totalInstantProductsCount,
       totalOnRequestProductsCount,
       last12MonthProducts,
       totalUniqueProductCount,
+      topCountries,
     };
   } catch (error) {
     throw error;
