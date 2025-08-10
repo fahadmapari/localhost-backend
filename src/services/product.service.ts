@@ -133,18 +133,30 @@ export const fetchProductMetrics = async () => {
     const totalUniqueProductCount =
       await Product.estimatedDocumentCount().lean();
 
-    const topCountries = await ProductVariant.aggregate([
+    const topCountriesAndCities = await ProductVariant.aggregate([
       {
-        $group: {
-          _id: "$meetingPoint.country",
-          count: { $sum: 1 },
+        $facet: {
+          topCountries: [
+            {
+              $group: {
+                _id: "$meetingPoint.country",
+                count: { $sum: 1 },
+              },
+            },
+            { $sort: { count: -1 } },
+            { $limit: 10 },
+          ],
+          topCities: [
+            {
+              $group: {
+                _id: "$meetingPoint.city",
+                count: { $sum: 1 },
+              },
+            },
+            { $sort: { count: -1 } },
+            { $limit: 10 },
+          ],
         },
-      },
-      {
-        $sort: { count: -1 },
-      },
-      {
-        $limit: 10,
       },
     ]).exec();
 
@@ -154,7 +166,7 @@ export const fetchProductMetrics = async () => {
       totalOnRequestProductsCount,
       last12MonthProducts,
       totalUniqueProductCount,
-      topCountries,
+      topCountriesAndCities,
     };
   } catch (error) {
     throw error;
