@@ -1,4 +1,6 @@
 import bcrypt from "bcrypt";
+import crypto from "crypto";
+
 // to make key.key to key { key: key }
 export function parseNestedObject<T = any>(obj: Record<string, any>): T {
   const result: Record<string, any> = {};
@@ -29,4 +31,12 @@ export function timeToMinutes(timeStr: string): number {
 
 export function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
+}
+
+// TODO: update later
+export function generateETag(productData: any) {
+  return crypto
+    .createHash("md5")
+    .update(JSON.stringify(productData))
+    .digest("hex");
 }

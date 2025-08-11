@@ -12,7 +12,7 @@ import {
   uploadProductImages,
 } from "../services/product.service";
 import { sendResponse } from "../utils/controller";
-import { parseNestedObject } from "../utils/common";
+import { generateETag, parseNestedObject } from "../utils/common";
 import { createError } from "../utils/errorHandlers";
 
 export const editProductById: ExpressController = async (req, res, next) => {
@@ -78,7 +78,16 @@ export const getProducts: ExpressController = async (req, res, next) => {
 export const getProductMetrics: ExpressController = async (req, res, next) => {
   try {
     const metrics = await fetchProductMetrics();
-    res.set("Cache-Control", "private, max-age=3600");
+    const etag = generateETag(metrics);
+
+    if (req.headers["if-none-match"] === etag) {
+      return sendResponse(res, "Metrics not modified", true, 304);
+    }
+
+    res.set({
+      "Cache-Control": "private, max-age=3600",
+      ETag: generateETag(metrics),
+    });
     sendResponse(res, "Metrics fetched successfully", true, 200, metrics);
   } catch (error) {
     console.log(error);
