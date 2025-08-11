@@ -3,6 +3,39 @@ import { z } from "zod";
 import { hashPassword } from "../utils/common";
 import { ClientProfile } from "../models/profile.model";
 import User from "../models/user.model";
+import dayjs from "dayjs";
+
+export const getClientMetricsService = async () => {
+  try {
+    const totalClients = await ClientProfile.estimatedDocumentCount().lean();
+    const totalActiveClients = await ClientProfile.countDocuments({
+      status: true,
+    }).lean();
+    const totalBoardedClients = await ClientProfile.countDocuments({
+      boardedFromOnlinePortal: true,
+    }).lean();
+
+    const oneYearAgo = dayjs().subtract(1, "year").toDate();
+
+    const clientsOnboardLast12Months = await ClientProfile.find({
+      createdAt: {
+        $gte: oneYearAgo,
+      },
+    })
+      .sort({ createdAt: -1 })
+      .select("createdAt")
+      .lean();
+
+    return {
+      totalClients,
+      totalActiveClients,
+      totalBoardedClients,
+      clientsOnboardLast12Months,
+    };
+  } catch (error) {
+    throw error;
+  }
+};
 
 export const getClientListService = async (page: number, limit: number) => {
   try {

@@ -78,6 +78,7 @@ export const getProducts: ExpressController = async (req, res, next) => {
 export const getProductMetrics: ExpressController = async (req, res, next) => {
   try {
     const metrics = await fetchProductMetrics();
+    res.set("Cache-Control", "private, max-age=3600");
     sendResponse(res, "Metrics fetched successfully", true, 200, metrics);
   } catch (error) {
     console.log(error);
