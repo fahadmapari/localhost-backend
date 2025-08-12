@@ -12,3 +12,18 @@ export const userSchema = z
     message: "Passwords do not match.",
     path: ["confirmPassword"],
   });
+
+export const changePasswordSchema = z
+  .object({
+    oldPassword: z.string("Old password is required."),
+    newPassword: z.string("New password is required."),
+    confirmPassword: z.string("Confirm password is required."),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  })
+  .refine((data) => data.oldPassword === data.newPassword, {
+    message: "Old password and new password should not be same.",
+    path: ["newPassword"],
+  });

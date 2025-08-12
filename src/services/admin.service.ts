@@ -2,10 +2,23 @@ import User from "../models/user.model";
 import { z } from "zod";
 import { userSchema } from "../schema/user.schema";
 import { hashPassword } from "../utils/common";
+import { createError } from "../utils/errorHandlers";
 
-export const changeAdminPasswordService = async (userId: string) => {
+export const changeAdminPasswordService = async (
+  userId: string,
+  newPassword: string
+) => {
   try {
     const foundUser = await User.findById(userId);
+
+    if (!foundUser) {
+      throw createError("User not found", 404);
+    }
+    const hashedPassword = await hashPassword(newPassword);
+
+    await foundUser.updateOne({
+      password: hashedPassword,
+    });
   } catch (error) {
     throw error;
   }
