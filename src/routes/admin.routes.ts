@@ -11,6 +11,6 @@ adminRouter.get("/", getAllAdmins);
 
 adminRouter.post("/", createNewAdminController);
 
-adminRouter.post("/change-password", changeAdminPasswordController);
+adminRouter.put("/change-password", changeAdminPasswordController);
 
 export default adminRouter;
