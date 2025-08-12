@@ -1,4 +1,3 @@
-import { create } from "lodash";
 import User from "../models/user.model";
 
 export const getAllAdminsService = async () => {
