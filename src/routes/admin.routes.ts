@@ -1,8 +1,13 @@
 import { Router } from "express";
-import { getAllAdmins } from "../controllers/admin.controller";
+import {
+  createNewAdminController,
+  getAllAdmins,
+} from "../controllers/admin.controller";
 
 const adminRouter = Router();
 
 adminRouter.get("/", getAllAdmins);
+
+adminRouter.post("/", createNewAdminController);
 
 export default adminRouter;
