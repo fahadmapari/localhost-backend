@@ -2,7 +2,6 @@ import express from "express";
 import { PORT } from "./config/env";
 import userRouter from "./routes/user.routes";
 import authRouter from "./routes/auth.routes";
-import subscriptionRouter from "./routes/subscription.routes";
 import { connectDB } from "./db/mongoDB";
 import globalErrorMiddleware from "./middlewares/error.middleware";
 import cookieParser from "cookie-parser";
@@ -41,7 +40,6 @@ app.get("/", (req, res) => {
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/products", productRouter);
-app.use("/api/v1/subscriptions", subscriptionRouter);
 app.use("/api/v1/clients", clientRouter);
 app.use("/api/v1/admins", adminRouter);
 
