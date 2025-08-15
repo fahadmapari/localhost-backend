@@ -176,10 +176,15 @@ export const fetchProductMetrics = async () => {
 export const getAllProducts = async (
   page: number,
   limit: number,
-  bookingType: string
+  bookingType: string,
+  searchTerm: string
 ) => {
   try {
     const filters: Record<string, any> = {};
+
+    if (searchTerm) {
+      filters.$text = { $search: searchTerm };
+    }
 
     if (bookingType === "all") {
       filters.bookingType = { $in: ["instant", "request"] };

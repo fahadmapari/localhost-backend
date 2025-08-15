@@ -58,12 +58,18 @@ export const getProductById: ExpressController = async (req, res, next) => {
 
 export const getProducts: ExpressController = async (req, res, next) => {
   try {
-    const { page = 0, limit = 10, bookingType = "all" } = req.query;
+    const {
+      page = 0,
+      limit = 10,
+      bookingType = "all",
+      searchTerm = "",
+    } = req.query;
 
     const products = await getAllProducts(
       Number(page),
       Number(limit) < 100 ? Number(limit) : 100,
-      bookingType.toString()
+      bookingType.toString(),
+      searchTerm.toString()
     );
 
     sendResponse(res, "Products fetched successfully", true, 200, {
