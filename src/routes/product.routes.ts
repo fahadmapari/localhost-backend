@@ -5,6 +5,7 @@ import {
   getProductById,
   getProductMetrics,
   getProducts,
+  searchProductController,
 } from "../controllers/product.controller";
 import { upload } from "../config/multer";
 import {
@@ -51,6 +52,13 @@ productRouter.get(
   authorizationMiddleware,
   isAdminMiddleware,
   getProductMetrics
+);
+
+productRouter.post(
+  "/search",
+  authorizationMiddleware,
+  isAdminMiddleware,
+  searchProductController
 );
 
 export default productRouter;

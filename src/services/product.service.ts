@@ -308,3 +308,22 @@ export const uploadProductImages = async (
     throw error;
   }
 };
+
+export const searchProuductsByTextService = async (searchTerm: string) => {
+  try {
+    const products = await ProductVariant.find({
+      $text: {
+        $search: searchTerm,
+      },
+    })
+      .sort({ createdAt: -1 })
+      .populate("baseProduct")
+      .lean();
+
+    console.log(products);
+
+    return products;
+  } catch (error) {
+    throw error;
+  }
+};

@@ -8,12 +8,14 @@ import {
   fetchProductMetrics,
   findProductById,
   getAllProducts,
+  searchProuductsByTextService,
   updateProductById,
   uploadProductImages,
 } from "../services/product.service";
 import { sendResponse } from "../utils/controller";
 import { generateETag, parseNestedObject } from "../utils/common";
 import { createError } from "../utils/errorHandlers";
+import { send } from "process";
 
 export const editProductById: ExpressController = async (req, res, next) => {
   try {
@@ -127,6 +129,30 @@ export const addProduct: ExpressController = async (req, res, next) => {
     sendResponse(res, "Product added successfully", true, 200, {
       product: newProduct,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const searchProductController: ExpressController = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    if (!req.body.searchTerm) {
+      throw createError("Search term is required", 400);
+    }
+
+    const products = await searchProuductsByTextService(req.body.searchTerm);
+
+    return sendResponse(
+      res,
+      "Products fetched successfully",
+      true,
+      200,
+      products
+    );
   } catch (error) {
     next(error);
   }
