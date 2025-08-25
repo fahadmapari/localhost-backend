@@ -320,8 +320,6 @@ export const searchProuductsByTextService = async (searchTerm: string) => {
       .populate("baseProduct")
       .lean();
 
-    console.log(products);
-
     return products;
   } catch (error) {
     throw error;
