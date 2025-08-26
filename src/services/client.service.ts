@@ -5,6 +5,15 @@ import { ClientProfile } from "../models/profile.model";
 import User from "../models/user.model";
 import dayjs from "dayjs";
 
+export const getAllClientsService = async () => {
+  try {
+    const clients = await ClientProfile.find().populate("userId").lean();
+    return clients;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const getClientMetricsService = async () => {
   try {
     const totalClients = await ClientProfile.estimatedDocumentCount().lean();

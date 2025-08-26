@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   createClientController,
+  getAllClientsController,
   getClientListController,
   getClientMetricsController,
 } from "../controllers/client.controller";
@@ -23,6 +24,13 @@ clientRouter.get(
   authorizationMiddleware,
   isAdminMiddleware,
   getClientListController
+);
+
+clientRouter.get(
+  "/all",
+  authorizationMiddleware,
+  isAdminMiddleware,
+  getAllClientsController
 );
 
 clientRouter.get(

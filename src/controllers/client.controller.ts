@@ -1,11 +1,31 @@
 import { clientSchema } from "../schema/client.schema";
 import {
+  getAllClientsService,
   getClientListService,
   getClientMetricsService,
   registerClientService,
 } from "../services/client.service";
 import { ExpressController } from "../types/controller.types";
 import { sendResponse } from "../utils/controller";
+
+export const getAllClientsController: ExpressController = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    const clients = await getAllClientsService();
+    return sendResponse(
+      res,
+      "Clients fetched successfully",
+      true,
+      200,
+      clients
+    );
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const getClientMetricsController: ExpressController = async (
   req,
