@@ -13,8 +13,13 @@ import cors from "cors";
 import productRouter from "./routes/product.routes";
 import clientRouter from "./routes/client.routes";
 import adminRouter from "./routes/admin.routes";
+import conversationRouter from "./routes/conversation.routes";
+import { Server } from "socket.io";
+import { createServer } from "node:http";
 
 const app = express();
+const serverForSocket = createServer(app);
+const io = new Server(serverForSocket);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -42,6 +47,7 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/products", productRouter);
 app.use("/api/v1/clients", clientRouter);
 app.use("/api/v1/admins", adminRouter);
+app.use("/api/v1/conversations", conversationRouter);
 
 app.use(globalErrorMiddleware);
 
