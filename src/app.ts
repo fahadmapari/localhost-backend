@@ -69,12 +69,14 @@ io.on("connection", (socket) => {
       userId
     );
 
-    socket
-      .to(conversationId)
-      .emit("new-message", {
-        message: newMessage.text,
-        sender: newMessage.sender,
-      });
+    socket.to(conversationId).emit("new-message", {
+      message: newMessage.text,
+      sender: newMessage.sender,
+    });
+  });
+
+  socket.on("leave-convo", ({ conversationId }) => {
+    socket.leave(conversationId);
   });
 });
 

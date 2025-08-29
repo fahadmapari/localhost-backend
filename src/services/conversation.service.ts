@@ -1,6 +1,22 @@
 import { Conversation, Message } from "../models/conversation.model";
 import { createError } from "../utils/errorHandlers";
 
+export const getConversationService = async (conversationId: string) => {
+  try {
+    const conversation = await Conversation.findById(conversationId)
+      .populate("participants")
+      .lean();
+
+    if (!conversation) {
+      throw createError("conversation not found", 404);
+    }
+
+    return conversation;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const getAllMessagesForConversationService = async (
   conversationId: string
 ) => {

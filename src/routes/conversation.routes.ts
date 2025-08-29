@@ -3,6 +3,7 @@ import {
   createNewConversationController,
   getAllConversationsController,
   getAllMessagesForConversationController,
+  getConversationController,
 } from "../controllers/conversation.controller";
 import {
   authorizationMiddleware,
@@ -23,6 +24,13 @@ conversationRouter.post(
   authorizationMiddleware,
   isAdminMiddleware,
   createNewConversationController
+);
+
+conversationRouter.get(
+  "/:conversationId",
+  authorizationMiddleware,
+  isAdminMiddleware,
+  getConversationController
 );
 
 conversationRouter.get(
