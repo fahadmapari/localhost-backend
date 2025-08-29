@@ -16,10 +16,16 @@ import adminRouter from "./routes/admin.routes";
 import conversationRouter from "./routes/conversation.routes";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
+import { createNewMessageService } from "./services/conversation.service";
 
 const app = express();
 const serverForSocket = createServer(app);
-const io = new Server(serverForSocket);
+const io = new Server(serverForSocket, {
+  cors: {
+    origin: ["http://localhost:3000", "http://localhost:5173"],
+    credentials: true,
+  },
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -51,7 +57,29 @@ app.use("/api/v1/conversations", conversationRouter);
 
 app.use(globalErrorMiddleware);
 
-app.listen(PORT, async () => {
-  console.log(`Server is running on port ${PORT}`);
-  await connectDB();
+io.on("connection", (socket) => {
+  socket.on("join-convo", ({ conversationId }) => {
+    socket.join(conversationId);
+  });
+
+  socket.on("send-message", async ({ conversationId, message, userId }) => {
+    const newMessage = await createNewMessageService(
+      conversationId,
+      message,
+      userId
+    );
+
+    socket
+      .to(conversationId)
+      .emit("new-message", {
+        message: newMessage.text,
+        sender: newMessage.sender,
+      });
+  });
+});
+
+connectDB().then(() => {
+  serverForSocket.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 });

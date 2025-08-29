@@ -1,10 +1,36 @@
 import {
   createNewConversationService,
   getAllConversationsOfUserService,
+  getAllMessagesForConversationService,
 } from "../services/conversation.service";
 import { ExpressController } from "../types/controller.types";
 import { sendResponse } from "../utils/controller";
 import { createError } from "../utils/errorHandlers";
+
+export const getAllMessagesForConversationController: ExpressController =
+  async (req, res, next) => {
+    try {
+      const conversationId = req.params.conversationId;
+
+      if (!conversationId) {
+        throw createError("conversationId is required", 400);
+      }
+
+      const messages = await getAllMessagesForConversationService(
+        conversationId
+      );
+
+      return sendResponse(
+        res,
+        "All messages fetched successfully!",
+        true,
+        200,
+        messages
+      );
+    } catch (error) {
+      next(error);
+    }
+  };
 
 export const getAllConversationsController: ExpressController = async (
   req,

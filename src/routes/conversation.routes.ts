@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createNewConversationController,
   getAllConversationsController,
+  getAllMessagesForConversationController,
 } from "../controllers/conversation.controller";
 import {
   authorizationMiddleware,
@@ -22,6 +23,13 @@ conversationRouter.post(
   authorizationMiddleware,
   isAdminMiddleware,
   createNewConversationController
+);
+
+conversationRouter.get(
+  "/messages/:conversationId",
+  authorizationMiddleware,
+  isAdminMiddleware,
+  getAllMessagesForConversationController
 );
 
 export default conversationRouter;
