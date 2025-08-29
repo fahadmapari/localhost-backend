@@ -72,6 +72,7 @@ io.on("connection", (socket) => {
     socket.to(conversationId).emit("new-message", {
       message: newMessage.text,
       sender: newMessage.sender,
+      timestamp: newMessage.createdAt,
     });
   });
 
