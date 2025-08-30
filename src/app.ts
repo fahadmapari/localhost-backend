@@ -17,6 +17,7 @@ import conversationRouter from "./routes/conversation.routes";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
 import { createNewMessageService } from "./services/conversation.service";
+import { initializeSockets } from "./config/sockets";
 
 const app = express();
 const serverForSocket = createServer(app);
@@ -57,29 +58,7 @@ app.use("/api/v1/conversations", conversationRouter);
 
 app.use(globalErrorMiddleware);
 
-io.on("connection", (socket) => {
-  socket.on("join-convo", ({ conversationId }) => {
-    socket.join(conversationId);
-  });
-
-  socket.on("send-message", async ({ conversationId, message, userId }) => {
-    const newMessage = await createNewMessageService(
-      conversationId,
-      message,
-      userId
-    );
-
-    socket.to(conversationId).emit("new-message", {
-      message: newMessage.text,
-      sender: newMessage.sender,
-      timestamp: newMessage.createdAt,
-    });
-  });
-
-  socket.on("leave-convo", ({ conversationId }) => {
-    socket.leave(conversationId);
-  });
-});
+initializeSockets(io);
 
 connectDB().then(() => {
   serverForSocket.listen(PORT, () => {
