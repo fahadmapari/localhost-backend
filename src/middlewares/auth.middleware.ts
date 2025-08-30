@@ -32,6 +32,7 @@ export const authorizationMiddleware: ExpressController = async (
 
     next();
   } catch (error: any) {
+    console.log(error);
     return sendResponse(
       res,
       error?.message || "Unauthorized",

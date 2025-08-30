@@ -8,10 +8,19 @@ import {
   JWT_REFRESH_EXP_IN,
   JWT_REFRESH_SECRET,
   JWT_SECRET,
+  THIRTY_DAYS,
 } from "../config/env";
 import ms from "ms";
 import crypto from "crypto";
 import redisClient from "../config/redis";
+import {
+  comparePassword,
+  generateAccessToken,
+  generateRefreshToken,
+  hashPassword,
+  verifyRefreshToken,
+  verifyToken,
+} from "../utils/common";
 
 export const signupUser = async (
   name: string,
@@ -35,7 +44,7 @@ export const signupUser = async (
     }
 
     // HASH PASSWORD
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await hashPassword(password);
 
     const newUser = await User.create(
       [{ name, email, password: hashedPassword, role }],
@@ -48,29 +57,17 @@ export const signupUser = async (
       throw createError("Server Error", 500);
     }
 
-    const accessToken = jwt.sign(
-      {
-        userId: newUser[0]._id.toString(),
-        role: newUser[0].role,
-      },
-      JWT_SECRET!,
-      {
-        expiresIn: JWT_EXP_IN as ms.StringValue,
-      }
+    const accessToken = generateAccessToken(
+      newUser[0]._id.toString(),
+      newUser[0].role
     );
 
     const jti = crypto.randomUUID();
 
-    const refreshToken = jwt.sign(
-      {
-        userId: newUser[0]._id.toString(),
-        role: newUser[0].role,
-        jti,
-      },
-      JWT_REFRESH_SECRET!,
-      {
-        expiresIn: JWT_REFRESH_EXP_IN as ms.StringValue,
-      }
+    const refreshToken = generateRefreshToken(
+      newUser[0]._id.toString(),
+      newUser[0].role,
+      jti
     );
 
     await redisClient.set(
@@ -82,7 +79,7 @@ export const signupUser = async (
         email: newUser[0].email,
       },
       {
-        ex: 30 * 24 * 60 * 60, // 30 days
+        ex: Number(THIRTY_DAYS), // 30 days
         nx: true, // Only set if not exists
       }
     );
@@ -119,7 +116,7 @@ export const siginInUser = async (
       throw createError("User not found", 404);
     }
 
-    const isPasswordCorrect = await bcrypt.compare(
+    const isPasswordCorrect = await comparePassword(
       password,
       foundUser.password
     );
@@ -132,29 +129,17 @@ export const siginInUser = async (
       throw createError("Server Error", 500);
     }
 
-    const accessToken = jwt.sign(
-      {
-        userId: foundUser._id.toString(),
-        role: foundUser.role,
-      },
-      JWT_SECRET,
-      {
-        expiresIn: JWT_EXP_IN as ms.StringValue,
-      }
+    const accessToken = generateAccessToken(
+      foundUser._id.toString(),
+      foundUser.role
     );
 
     const jti = crypto.randomUUID();
 
-    const refreshToken = jwt.sign(
-      {
-        userId: foundUser._id.toString(),
-        role: foundUser.role,
-        jti,
-      },
-      JWT_REFRESH_SECRET,
-      {
-        expiresIn: JWT_REFRESH_EXP_IN as ms.StringValue,
-      }
+    const refreshToken = generateRefreshToken(
+      foundUser._id.toString(),
+      foundUser.role,
+      jti
     );
 
     await redisClient.set(
@@ -166,7 +151,7 @@ export const siginInUser = async (
         email: foundUser.email,
       },
       {
-        ex: 30 * 24 * 60 * 60, // 30 days
+        ex: Number(THIRTY_DAYS), // 30 days
         nx: true, // Only set if not exists
       }
     );
@@ -201,16 +186,7 @@ export const refreshAccessToken = async (refreshToken: string) => {
       throw createError("Invalid token", 401);
     }
 
-    const accessToken = jwt.sign(
-      {
-        userId: decoded.userId,
-        role: decoded.role,
-      },
-      JWT_SECRET!,
-      {
-        expiresIn: JWT_EXP_IN as ms.StringValue,
-      }
-    );
+    const accessToken = generateAccessToken(decoded.userId, decoded.role);
 
     return { accessToken, user: exists };
   } catch (error: any) {
@@ -220,13 +196,14 @@ export const refreshAccessToken = async (refreshToken: string) => {
     ) {
       error.statusCode = 401;
     }
+    console.log(error);
     throw error;
   }
 };
 
 export const verifyAccessToken = async (accessToken: string) => {
   try {
-    const decoded: any = jwt.verify(accessToken, JWT_SECRET!);
+    const decoded: any = verifyToken(accessToken);
 
     return {
       userId: decoded.userId as string,
@@ -239,13 +216,14 @@ export const verifyAccessToken = async (accessToken: string) => {
     ) {
       error.statusCode = 401;
     }
+    console.log(error);
     throw error;
   }
 };
 
 export const revokeRefreshToken = async (refreshToken: string) => {
   try {
-    const decoded: any = jwt.verify(refreshToken, JWT_REFRESH_SECRET!);
+    const decoded: any = verifyRefreshToken(refreshToken);
     await redisClient.del(`refresh:${decoded?.jti}`);
   } catch (error) {
     throw error;

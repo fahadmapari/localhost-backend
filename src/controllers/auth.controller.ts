@@ -103,6 +103,7 @@ export const refreshToken: ExpressController = async (req, res, next) => {
       user: data.user,
     });
   } catch (error) {
+    console.log(error);
     next(error);
   }
 };

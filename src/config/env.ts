@@ -19,4 +19,5 @@ export const {
   AWS_SECRET_ACCESS_KEY,
   AWS_REGION,
   S3_BUCKET_NAME,
+  THIRTY_DAYS,
 } = process.env as Record<string, string>;
