@@ -61,7 +61,7 @@ app.use(globalErrorMiddleware);
 initializeSockets(io);
 
 setInterval(
-  periodicRoomCleanup,
+  () => periodicRoomCleanup(io),
   // 30 minutes
   30 * 60 * 1000
 );
