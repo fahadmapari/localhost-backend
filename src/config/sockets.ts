@@ -29,7 +29,7 @@ export const initializeSockets = (
   });
 };
 
-function periodicRoomCleanup(
+export function periodicRoomCleanup(
   io: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
 ) {
   const rooms = io.sockets.adapter.rooms;

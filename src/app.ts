@@ -17,7 +17,7 @@ import conversationRouter from "./routes/conversation.routes";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
 import { createNewMessageService } from "./services/conversation.service";
-import { initializeSockets } from "./config/sockets";
+import { initializeSockets, periodicRoomCleanup } from "./config/sockets";
 
 const app = express();
 const serverForSocket = createServer(app);
@@ -59,6 +59,12 @@ app.use("/api/v1/conversations", conversationRouter);
 app.use(globalErrorMiddleware);
 
 initializeSockets(io);
+
+setInterval(
+  periodicRoomCleanup,
+  // 30 minutes
+  30 * 60 * 1000
+);
 
 connectDB().then(() => {
   serverForSocket.listen(PORT, () => {
