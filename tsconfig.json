@@ -13,6 +13,11 @@
     "typeRoots": ["./src/types", "./node_modules/@types"],
     "resolveJsonModule": true
   },
+    "tsc-alias": {
+    "verbose": false,
+    "resolveFullPaths": true,
+    "resolveFullExtension": ".js"
+  },
   "include": ["src"],
   "exclude": ["dist", "node_modules"]
 }

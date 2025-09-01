@@ -1,7 +1,6 @@
 import { z } from "zod";
-import languages from "../assets/json/languages.v1.json" assert { type: "json" };
+import languages from "../assets/json/languages.v1.json" with { type: "json" };
 import { timeToMinutes } from "../utils/common";
-import { bo } from "@upstash/redis/zmscore-DzNHSWxc";
 
 function preprocessToArray<T extends z.ZodArray<z.ZodTypeAny>>(arraySchema: T) {
   return z.preprocess(
