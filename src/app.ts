@@ -23,7 +23,14 @@ const app = express();
 const serverForSocket = createServer(app);
 const io = new Server(serverForSocket, {
   cors: {
-    origin: ["http://localhost:3000", "http://localhost:5173"],
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://localhostapp.in",
+      "https://localhostapp.in",
+      "http://admin.localhostapp.in",
+      "https://admin.localhostapp.in",
+    ],
     credentials: true,
   },
 });
@@ -36,7 +43,14 @@ app.use(morgan("dev"));
 
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://localhost:5173"], // frontend port
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://localhostapp.in",
+      "https://localhostapp.in",
+      "http://admin.localhostapp.in",
+      "https://admin.localhostapp.in",
+    ], // frontend port
     credentials: true, // if using cookies
   })
 );
