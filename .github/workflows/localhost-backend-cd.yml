@@ -102,6 +102,7 @@ jobs:
             cd /home/ubuntu/localhost-backend   # adjust path to your app
             git pull origin master
             npm ci --omit=dev
+            npm install
             npm run build --if-present
             if ! command -v pm2 >/dev/null 2>&1; then
               sudo npm install -g pm2
