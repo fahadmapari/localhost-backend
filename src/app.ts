@@ -16,7 +16,6 @@ import adminRouter from "./routes/admin.routes";
 import conversationRouter from "./routes/conversation.routes";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
-import { createNewMessageService } from "./services/conversation.service";
 import { initializeSockets, periodicRoomCleanup } from "./config/sockets";
 
 const app = express();
@@ -35,6 +34,7 @@ const io = new Server(serverForSocket, {
   },
 });
 
+app.set("trust proxy", true);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
