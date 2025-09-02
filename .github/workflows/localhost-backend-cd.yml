@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
@@ -89,10 +89,47 @@ jobs:
           echo "- GEMINI_KEY: $(echo $GEMINI_KEY | cut -c1-15)..."
       - run: npm ci
       - run: npm run build --if-present
-      - name: Reload app with PM2
+      
+      - name: Setup SSH key
         run: |
-          if ! command -v pm2 >/dev/null 2>&1; then
-            sudo npm install -g pm2
-          fi
-          pm2 start ecosystem.config.cjs --env production || pm2 reload all
-          pm2 save
+          echo "${{ secrets.EC2_SSH_KEY }}" > private_key.pem
+          chmod 400 private_key.pem
+
+      - name: Deploy to EC2
+        run: |
+          ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            set -e
+            cd /home/ubuntu/localhost-backend   # adjust path to your app
+            git pull origin master
+            npm ci --omit=dev
+            npm run build --if-present
+            if ! command -v pm2 >/dev/null 2>&1; then
+              sudo npm install -g pm2
+            fi
+
+            # Create/update .env.production file
+            cat > .env.production <<EOL
+            PORT=${{ secrets.PORT }}
+            NODE_ENV=production
+            DB_URI=${{ secrets.DB_URI }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_EXP_IN=${{ secrets.JWT_EXP_IN }}
+            ARCJET_ENV=${{ secrets.ARCJET_ENV }}
+            ARCJET_KEY=${{ secrets.ARCJET_KEY }}
+            REDIS_TOKEN=${{ secrets.REDIS_TOKEN }}
+            REDIS_READONLY_TOKEN=${{ secrets.REDIS_READONLY_TOKEN }}
+            REDIS_URL=${{ secrets.REDIS_URL }}
+            JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+            JWT_REFRESH_EXP_IN=${{ secrets.JWT_REFRESH_EXP_IN }}
+            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            AWS_REGION=${{ secrets.AWS_REGION }}
+            S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
+            OPEN_AI_KEY=${{ secrets.OPEN_AI_KEY }}
+            GEMINI_KEY=${{ secrets.GEMINI_KEY }}
+            THIRTY_DAYS=${{ secrets.THIRTY_DAYS }}
+            EOL
+
+            pm2 start ecosystem.config.cjs --env production || pm2 reload all
+            pm2 save
+          EOF
