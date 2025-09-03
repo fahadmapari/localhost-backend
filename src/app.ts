@@ -17,7 +17,11 @@ import conversationRouter from "./routes/conversation.routes";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
 import { initializeSockets, periodicRoomCleanup } from "./config/sockets";
+import redisClient from "./config/redis";
+import { createAdapter } from "@socket.io/redis-adapter";
 
+const pubClient = redisClient;
+const subClient = redisClient;
 const app = express();
 const serverForSocket = createServer(app);
 const io = new Server(serverForSocket, {
@@ -71,6 +75,8 @@ app.use("/api/v1/admins", adminRouter);
 app.use("/api/v1/conversations", conversationRouter);
 
 app.use(globalErrorMiddleware);
+
+io.adapter(createAdapter(pubClient, subClient));
 
 initializeSockets(io);
 
