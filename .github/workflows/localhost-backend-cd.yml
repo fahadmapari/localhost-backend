@@ -1,27 +1,94 @@
-name: Deploy Backend to EC2
+# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
+
+name: Localhost Backend CD
 
 on:
   push:
     branches: ["master"]
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    strategy:
+      matrix:
+        node-version: [22.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+    env:
+      PORT: ${{ secrets.PORT }}
+      NODE_ENV: test
+      DB_URI: ${{ secrets.DB_URI }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_EXP_IN: ${{ secrets.JWT_EXP_IN }}
+      ARCJET_ENV: ${{ secrets.ARCJET_ENV }}
+      ARCJET_KEY: ${{ secrets.ARCJET_KEY }}
+      REDIS_TOKEN: ${{ secrets.REDIS_TOKEN }}
+      REDIS_READONLY_TOKEN: ${{ secrets.REDIS_READONLY_TOKEN }}
+      REDIS_URL: ${{ secrets.REDIS_URL }}
+      JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+      JWT_REFRESH_EXP_IN: ${{ secrets.JWT_REFRESH_EXP_IN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+      OPEN_AI_KEY: ${{ secrets.OPEN_AI_KEY }}
+      GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+      THIRTY_DAYS: ${{ secrets.THIRTY_DAYS }}
 
-      - name: Setup Node
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+      - name: Validate required environment variables
+        run: |
+          echo "✅ Validating environment variables..."
 
-      - name: Install dependencies
-        run: npm install
+          # Check for critical variables
+          if [[ -z "$DB_URI" ]]; then
+            echo "❌ DB_URI is not set"
+            exit 1
+          fi
 
-      - name: Build project
-        run: npm run build
+          if [[ -z "$JWT_SECRET" ]]; then
+            echo "❌ JWT_SECRET is not set"
+            exit 1
+          fi
+
+          if [[ -z "$AWS_ACCESS_KEY_ID" ]]; then
+            echo "❌ AWS_ACCESS_KEY_ID is not set"
+            exit 1
+          fi
+
+          if [[ -z "$REDIS_URL" ]]; then
+            echo "❌ REDIS_URL is not set"
+            exit 1
+          fi
+
+          echo "✅ All critical environment variables are set"
+          echo "📋 Environment summary:"
+          echo "- PORT: $PORT"
+          echo "- NODE_ENV: $NODE_ENV"
+          echo "- AWS_REGION: $AWS_REGION"
+          echo "- S3_BUCKET_NAME: $S3_BUCKET_NAME"
+          echo "- JWT_EXP_IN: $JWT_EXP_IN"
+          echo "- JWT_REFRESH_EXP_IN: $JWT_REFRESH_EXP_IN"
+          echo "- THIRTY_DAYS: $THIRTY_DAYS"
+          echo "- ARCJET_ENV: $ARCJET_ENV"
+
+          # Show masked values for security
+          echo "🔒 Masked sensitive values:"
+          echo "- DB_URI: $(echo $DB_URI | cut -c1-20)..."
+          echo "- JWT_SECRET length: $(echo $JWT_SECRET | wc -c) characters"
+          echo "- REDIS_TOKEN length: $(echo $REDIS_TOKEN | wc -c) characters"
+          echo "- AWS_SECRET_ACCESS_KEY length: $(echo $AWS_SECRET_ACCESS_KEY | wc -c) characters"
+          echo "- OPEN_AI_KEY: $(echo $OPEN_AI_KEY | cut -c1-15)..."
+          echo "- GEMINI_KEY: $(echo $GEMINI_KEY | cut -c1-15)..."
+      - run: npm ci
+      - run: npm run build --if-present
 
       - name: Package build
         run: |
