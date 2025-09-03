@@ -118,8 +118,10 @@ jobs:
             tar -xzf ~/deploy.tar.gz -C /home/ubuntu/localhost-backend
             rm ~/deploy.tar.gz
 
-            # Install production deps (faster with cached ~/.npm)
-            npm ci --omit=dev --prefer-offline
+            # Install production deps (fallback if npm ci fails)
+            if ! npm ci --omit=dev --prefer-offline; then
+              npm install --omit=dev
+            fi
 
             # Update env file
             cat > .env.production <<'ENVVARS'
