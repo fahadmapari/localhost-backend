@@ -1,140 +1,86 @@
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
-
-name: Localhost Backend CD
+name: Deploy Backend to EC2
 
 on:
   push:
     branches: ["master"]
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-    env:
-      PORT: ${{ secrets.PORT }}
-      NODE_ENV: test
-      DB_URI: ${{ secrets.DB_URI }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      JWT_EXP_IN: ${{ secrets.JWT_EXP_IN }}
-      ARCJET_ENV: ${{ secrets.ARCJET_ENV }}
-      ARCJET_KEY: ${{ secrets.ARCJET_KEY }}
-      REDIS_TOKEN: ${{ secrets.REDIS_TOKEN }}
-      REDIS_READONLY_TOKEN: ${{ secrets.REDIS_READONLY_TOKEN }}
-      REDIS_URL: ${{ secrets.REDIS_URL }}
-      JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
-      JWT_REFRESH_EXP_IN: ${{ secrets.JWT_REFRESH_EXP_IN }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
-      OPEN_AI_KEY: ${{ secrets.OPEN_AI_KEY }}
-      GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
-      THIRTY_DAYS: ${{ secrets.THIRTY_DAYS }}
-
     steps:
-      - uses: actions/checkout@v4
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: "npm"
-      - name: Validate required environment variables
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci --omit=dev
+
+      - name: Build project
+        run: npm run build
+
+      - name: Package build
         run: |
-          echo "✅ Validating environment variables..."
+          mkdir deploy
+          cp -r dist package.json package-lock.json deploy/
+          tar -czf deploy.tar.gz -C deploy .
 
-          # Check for critical variables
-          if [[ -z "$DB_URI" ]]; then
-            echo "❌ DB_URI is not set"
-            exit 1
-          fi
-
-          if [[ -z "$JWT_SECRET" ]]; then
-            echo "❌ JWT_SECRET is not set"
-            exit 1
-          fi
-
-          if [[ -z "$AWS_ACCESS_KEY_ID" ]]; then
-            echo "❌ AWS_ACCESS_KEY_ID is not set"
-            exit 1
-          fi
-
-          if [[ -z "$REDIS_URL" ]]; then
-            echo "❌ REDIS_URL is not set"
-            exit 1
-          fi
-
-          echo "✅ All critical environment variables are set"
-          echo "📋 Environment summary:"
-          echo "- PORT: $PORT"
-          echo "- NODE_ENV: $NODE_ENV"
-          echo "- AWS_REGION: $AWS_REGION"
-          echo "- S3_BUCKET_NAME: $S3_BUCKET_NAME"
-          echo "- JWT_EXP_IN: $JWT_EXP_IN"
-          echo "- JWT_REFRESH_EXP_IN: $JWT_REFRESH_EXP_IN"
-          echo "- THIRTY_DAYS: $THIRTY_DAYS"
-          echo "- ARCJET_ENV: $ARCJET_ENV"
-
-          # Show masked values for security
-          echo "🔒 Masked sensitive values:"
-          echo "- DB_URI: $(echo $DB_URI | cut -c1-20)..."
-          echo "- JWT_SECRET length: $(echo $JWT_SECRET | wc -c) characters"
-          echo "- REDIS_TOKEN length: $(echo $REDIS_TOKEN | wc -c) characters"
-          echo "- AWS_SECRET_ACCESS_KEY length: $(echo $AWS_SECRET_ACCESS_KEY | wc -c) characters"
-          echo "- OPEN_AI_KEY: $(echo $OPEN_AI_KEY | cut -c1-15)..."
-          echo "- GEMINI_KEY: $(echo $GEMINI_KEY | cut -c1-15)..."
-      - run: npm ci
-      - run: npm run build --if-present
-      
       - name: Setup SSH key
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" > private_key.pem
           chmod 400 private_key.pem
 
-      - name: Deploy to EC2
+      - name: Copy build to EC2
         run: |
-          # Generate env file locally from GitHub secrets
-          cat > .env.production <<EOF
-          PORT=${{ secrets.PORT }}
-          NODE_ENV=production
-          DB_URI=${{ secrets.DB_URI }}
-          JWT_SECRET=${{ secrets.JWT_SECRET }}
-          JWT_EXP_IN=${{ secrets.JWT_EXP_IN }}
-          ARCJET_ENV=${{ secrets.ARCJET_ENV }}
-          ARCJET_KEY=${{ secrets.ARCJET_KEY }}
-          REDIS_TOKEN=${{ secrets.REDIS_TOKEN }}
-          REDIS_READONLY_TOKEN=${{ secrets.REDIS_READONLY_TOKEN }}
-          REDIS_URL=${{ secrets.REDIS_URL }}
-          JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
-          JWT_REFRESH_EXP_IN=${{ secrets.JWT_REFRESH_EXP_IN }}
-          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION=${{ secrets.AWS_REGION }}
-          S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
-          OPEN_AI_KEY=${{ secrets.OPEN_AI_KEY }}
-          GEMINI_KEY=${{ secrets.GEMINI_KEY }}
-          THIRTY_DAYS=${{ secrets.THIRTY_DAYS }}
-          EOF
+          scp -i private_key.pem -o StrictHostKeyChecking=no deploy.tar.gz ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/
 
-          # Copy env file to EC2
-          scp -i private_key.pem -o StrictHostKeyChecking=no .env.production ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/localhost-backend/.env.production
-
-          # SSH into EC2 and deploy
+      - name: Deploy on EC2
+        run: |
           ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
             cd /home/ubuntu/localhost-backend
-            git pull origin master
-            npm ci --omit=dev
-            npm install
-            npm run build
+
+            # Cleanup old dist
+            rm -rf dist
+
+            # Extract new build
+            tar -xzf ~/deploy.tar.gz -C /home/ubuntu/localhost-backend
+            rm ~/deploy.tar.gz
+
+            # Install production deps (faster with cached ~/.npm)
+            npm ci --omit=dev --prefer-offline
+
+            # Update env file
+            cat > .env.production <<EOL
+            PORT=${{ secrets.PORT }}
+            NODE_ENV=production
+            DB_URI=${{ secrets.DB_URI }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_EXP_IN=${{ secrets.JWT_EXP_IN }}
+            ARCJET_ENV=${{ secrets.ARCJET_ENV }}
+            ARCJET_KEY=${{ secrets.ARCJET_KEY }}
+            REDIS_TOKEN=${{ secrets.REDIS_TOKEN }}
+            REDIS_READONLY_TOKEN=${{ secrets.REDIS_READONLY_TOKEN }}
+            REDIS_URL=${{ secrets.REDIS_URL }}
+            JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+            JWT_REFRESH_EXP_IN=${{ secrets.JWT_REFRESH_EXP_IN }}
+            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            AWS_REGION=${{ secrets.AWS_REGION }}
+            S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
+            OPEN_AI_KEY=${{ secrets.OPEN_AI_KEY }}
+            GEMINI_KEY=${{ secrets.GEMINI_KEY }}
+            THIRTY_DAYS=${{ secrets.THIRTY_DAYS }}
+            EOL
+
+            # Restart app
             if ! command -v pm2 >/dev/null 2>&1; then
               sudo npm install -g pm2
             fi
-            pm2 start ecosystem.config.cjs --env production || pm2 reload all
+            pm2 start ecosystem.config.cjs --interpreter node --env production || pm2 reload all
             pm2 save
           EOF
-
