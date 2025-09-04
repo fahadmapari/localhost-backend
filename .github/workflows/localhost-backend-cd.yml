@@ -150,6 +150,19 @@ jobs:
             if ! command -v pm2 >/dev/null 2>&1; then
               sudo npm install -g pm2
             fi
-            pm2 start ecosystem.config.cjs --env production || pm2 reload all
+            
+            # Stop existing processes
+            pm2 stop localhost-backend 2>/dev/null || true
+            pm2 delete localhost-backend 2>/dev/null || true
+
+            # Start the application
+            pm2 start ecosystem.config.cjs --env production
+
+            # Save PM2 configuration
             pm2 save
+
+            # Show status for verification
+            pm2 status
+
+            echo "Deployment completed successfully"
           REMOTE
