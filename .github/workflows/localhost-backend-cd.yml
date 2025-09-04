@@ -150,6 +150,6 @@ jobs:
             if ! command -v pm2 >/dev/null 2>&1; then
               sudo npm install -g pm2
             fi
-            pm2 start ecosystem.config.cjs --interpreter node --env production || pm2 reload all
+            pm2 start ecosystem.config.cjs --env production || pm2 reload all
             pm2 save
           REMOTE
