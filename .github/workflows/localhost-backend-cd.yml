@@ -93,7 +93,7 @@ jobs:
       - name: Package build
         run: |
           mkdir deploy
-          cp -r dist package.json package-lock.json deploy/
+          cp -r dist deploy/
           tar -czf deploy.tar.gz -C deploy .
 
       - name: Setup SSH key
