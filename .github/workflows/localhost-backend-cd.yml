@@ -123,28 +123,28 @@ jobs:
               npm install --omit=dev
             fi
 
-            # Update env file
-            cat > .env.production <<'ENVVARS'
-PORT=${{ secrets.PORT }}
-NODE_ENV=production
-DB_URI=${{ secrets.DB_URI }}
-JWT_SECRET=${{ secrets.JWT_SECRET }}
-JWT_EXP_IN=${{ secrets.JWT_EXP_IN }}
-ARCJET_ENV=${{ secrets.ARCJET_ENV }}
-ARCJET_KEY=${{ secrets.ARCJET_KEY }}
-REDIS_TOKEN=${{ secrets.REDIS_TOKEN }}
-REDIS_READONLY_TOKEN=${{ secrets.REDIS_READONLY_TOKEN }}
-REDIS_URL=${{ secrets.REDIS_URL }}
-JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
-JWT_REFRESH_EXP_IN=${{ secrets.JWT_REFRESH_EXP_IN }}
-AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
-AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-AWS_REGION=${{ secrets.AWS_REGION }}
-S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
-OPEN_AI_KEY=${{ secrets.OPEN_AI_KEY }}
-GEMINI_KEY=${{ secrets.GEMINI_KEY }}
-THIRTY_DAYS=${{ secrets.THIRTY_DAYS }}
-ENVVARS
+          # Update env file
+          cat > .env.production <<'ENVVARS'
+          PORT=${{ secrets.PORT }}
+          NODE_ENV=production
+          DB_URI=${{ secrets.DB_URI }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_EXP_IN=${{ secrets.JWT_EXP_IN }}
+          ARCJET_ENV=${{ secrets.ARCJET_ENV }}
+          ARCJET_KEY=${{ secrets.ARCJET_KEY }}
+          REDIS_TOKEN=${{ secrets.REDIS_TOKEN }}
+          REDIS_READONLY_TOKEN=${{ secrets.REDIS_READONLY_TOKEN }}
+          REDIS_URL=${{ secrets.REDIS_URL }}
+          JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+          JWT_REFRESH_EXP_IN=${{ secrets.JWT_REFRESH_EXP_IN }}
+          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION=${{ secrets.AWS_REGION }}
+          S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
+          OPEN_AI_KEY=${{ secrets.OPEN_AI_KEY }}
+          GEMINI_KEY=${{ secrets.GEMINI_KEY }}
+          THIRTY_DAYS=${{ secrets.THIRTY_DAYS }}
+          ENVVARS
 
             # Restart app
             if ! command -v pm2 >/dev/null 2>&1; then
