@@ -111,6 +111,8 @@ jobs:
             set -e
             cd /home/ubuntu/localhost-backend
 
+            git pull origin master
+
             # Cleanup old dist
             rm -rf dist
 
