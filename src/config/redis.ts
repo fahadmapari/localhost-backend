@@ -12,7 +12,6 @@ export const IoRedis = new Redis(REDIS_TCP);
 // UPDATE LATER
 IoRedis.on("error", (err: any) => {
   console.error("Redis error:", err);
-  process.exit(1);
 });
 
 export default redisClient;
