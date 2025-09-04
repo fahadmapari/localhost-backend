@@ -17,11 +17,12 @@ import conversationRouter from "./routes/conversation.routes";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
 import { initializeSockets, periodicRoomCleanup } from "./config/sockets";
-import redisClient from "./config/redis";
+import redisClient, { IoRedis } from "./config/redis";
 import { createAdapter } from "@socket.io/redis-adapter";
 
-const pubClient = redisClient;
-const subClient = redisClient;
+const pubClient = IoRedis;
+const subClient = IoRedis.duplicate();
+
 const app = express();
 const serverForSocket = createServer(app);
 const io = new Server(serverForSocket, {

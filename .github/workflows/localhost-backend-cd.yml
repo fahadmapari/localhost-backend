@@ -135,6 +135,7 @@ jobs:
           REDIS_TOKEN=${{ secrets.REDIS_TOKEN }}
           REDIS_READONLY_TOKEN=${{ secrets.REDIS_READONLY_TOKEN }}
           REDIS_URL=${{ secrets.REDIS_URL }}
+          REDIS_TCP=${{ secrets.REDIS_TCP }}
           JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
           JWT_REFRESH_EXP_IN=${{ secrets.JWT_REFRESH_EXP_IN }}
           AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
