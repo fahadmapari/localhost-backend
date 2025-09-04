@@ -10,6 +10,7 @@ module.exports = {
       watch: false,
       node_args: "--sticky-session",
       env: {
+        ENIVRONMENT: process.env.ENIVRONMENT,
         PORT: process.env.PORT,
         NODE_ENV: process.env.NODE_ENV || "production",
         DB_URI: process.env.DB_URI,
