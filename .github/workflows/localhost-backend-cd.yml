@@ -87,7 +87,7 @@ jobs:
           echo "- AWS_SECRET_ACCESS_KEY length: $(echo $AWS_SECRET_ACCESS_KEY | wc -c) characters"
           echo "- OPEN_AI_KEY: $(echo $OPEN_AI_KEY | cut -c1-15)..."
           echo "- GEMINI_KEY: $(echo $GEMINI_KEY | cut -c1-15)..."
-      - run: npm ci
+      - run: npm install
       - run: npm run build --if-present
 
       - name: Package build
