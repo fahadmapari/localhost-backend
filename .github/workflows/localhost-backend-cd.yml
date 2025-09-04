@@ -153,6 +153,8 @@ jobs:
             if ! command -v pm2 >/dev/null 2>&1; then
               sudo npm install -g pm2
             fi
+
+            export NODE_ENV=production
             
             # Stop existing processes
             pm2 stop localhost-backend 2>/dev/null || true
