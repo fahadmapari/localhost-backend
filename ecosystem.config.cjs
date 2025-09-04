@@ -8,7 +8,7 @@ module.exports = {
       autorestart: true,
       max_memory_restart: "300M",
       watch: false,
-      node_args: "--sticky-session",
+      sticky: true,
       env: {
         PORT: process.env.PORT,
         NODE_ENV: "production",
