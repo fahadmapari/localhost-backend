@@ -7,11 +7,6 @@ const redisClient = new HTTPRedis({
   token: REDIS_TOKEN,
 });
 
-export const IoRedis = new Redis(REDIS_TCP);
-
-// UPDATE LATER
-IoRedis.on("error", (err: any) => {
-  console.error("Redis error:", err);
-});
+export const getIoRedisClient = () => new Redis(REDIS_TCP);
 
 export default redisClient;
