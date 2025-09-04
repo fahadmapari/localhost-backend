@@ -11,7 +11,7 @@ module.exports = {
       node_args: "--sticky-session",
       env: {
         PORT: process.env.PORT,
-        NODE_ENV: process.env.NODE_ENV || "production",
+        NODE_ENV: "production",
         DB_URI: process.env.DB_URI,
         JWT_SECRET: process.env.JWT_SECRET,
         JWT_EXP_IN: process.env.JWT_EXP_IN,
@@ -32,7 +32,7 @@ module.exports = {
       },
       env_production: {
         PORT: process.env.PORT,
-        NODE_ENV: process.env.NODE_ENV || "production",
+        NODE_ENV: "production",
         DB_URI: process.env.DB_URI,
         JWT_SECRET: process.env.JWT_SECRET,
         JWT_EXP_IN: process.env.JWT_EXP_IN,
