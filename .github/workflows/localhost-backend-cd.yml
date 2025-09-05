@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [22.x]
+        node-version: [24.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
     env:
       PORT: ${{ secrets.PORT }}
@@ -119,6 +119,8 @@ jobs:
             # Extract new build
             tar -xzf ~/deploy.tar.gz -C /home/ubuntu/localhost-backend
             rm ~/deploy.tar.gz
+
+            npm ci
 
             # Install production deps (fallback if npm ci fails)
             if ! npm ci --omit=dev --prefer-offline; then
