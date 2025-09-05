@@ -17,19 +17,8 @@ import conversationRouter from "./routes/conversation.routes";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
 import { initializeSockets, periodicRoomCleanup } from "./config/sockets";
-import { getIoRedisClient } from "./config/redis";
-import { createAdapter } from "@socket.io/redis-adapter";
-
-const pubClient = getIoRedisClient();
-const subClient = getIoRedisClient();
-
-pubClient.on("error", (err) => {
-  console.log("Redis pub error", err);
-});
-
-subClient.on("error", (err) => {
-  console.log("Redis sub error", err);
-});
+import { setupWorker } from "@socket.io/sticky";
+import { createAdapter } from "@socket.io/cluster-adapter";
 
 const app = express();
 const serverForSocket = createServer(app);
@@ -85,7 +74,9 @@ app.use("/api/v1/conversations", conversationRouter);
 
 app.use(globalErrorMiddleware);
 
-io.adapter(createAdapter(pubClient, subClient));
+io.adapter(createAdapter());
+
+setupWorker(io);
 
 initializeSockets(io);
 
