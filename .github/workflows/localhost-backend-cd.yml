@@ -1,139 +1,159 @@
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
-
-name: Localhost Backend CD
+# Optimized Node.js Backend CD Pipeline
+name: Backend CD
 
 on:
   push:
     branches: ["master"]
+  workflow_dispatch: # Allow manual triggers
+
+env:
+  NODE_VERSION: "24.x"
+  DEPLOY_DIR: "deploy"
 
 jobs:
   build:
+    name: Build Application
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [24.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-    env:
-      PORT: ${{ secrets.PORT }}
-      NODE_ENV: test
-      DB_URI: ${{ secrets.DB_URI }}
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      JWT_EXP_IN: ${{ secrets.JWT_EXP_IN }}
-      ARCJET_ENV: ${{ secrets.ARCJET_ENV }}
-      ARCJET_KEY: ${{ secrets.ARCJET_KEY }}
-      REDIS_TOKEN: ${{ secrets.REDIS_TOKEN }}
-      REDIS_READONLY_TOKEN: ${{ secrets.REDIS_READONLY_TOKEN }}
-      REDIS_URL: ${{ secrets.REDIS_URL }}
-      JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
-      JWT_REFRESH_EXP_IN: ${{ secrets.JWT_REFRESH_EXP_IN }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_REGION: ${{ secrets.AWS_REGION }}
-      S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
-      OPEN_AI_KEY: ${{ secrets.OPEN_AI_KEY }}
-      GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
-      THIRTY_DAYS: ${{ secrets.THIRTY_DAYS }}
+    outputs:
+      build-artifact: ${{ steps.upload.outputs.artifact-id }}
 
     steps:
-      - uses: actions/checkout@v4
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-      - name: Validate required environment variables
-        run: |
-          echo "✅ Validating environment variables..."
 
-          # Check for critical variables
-          if [[ -z "$DB_URI" ]]; then
-            echo "❌ DB_URI is not set"
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Build application
+        run: npm run build --if-present
+
+      - name: Create deployment package
+        run: |
+          mkdir -p ${{ env.DEPLOY_DIR }}
+          # Copy built files
+          if [ -d "dist" ]; then
+            cp -r dist ${{ env.DEPLOY_DIR }}/
+          fi
+          # Copy essential files
+          cp package*.json ${{ env.DEPLOY_DIR }}/
+          if [ -f "ecosystem.config.cjs" ]; then
+            cp ecosystem.config.cjs ${{ env.DEPLOY_DIR }}/
+          fi
+          # Create optimized tarball
+          tar --exclude='node_modules' --exclude='.git' -czf deploy.tar.gz -C ${{ env.DEPLOY_DIR }} .
+
+      - name: Upload build artifact
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ github.sha }}
+          path: deploy.tar.gz
+          retention-days: 7
+
+  deploy:
+    name: Deploy to EC2
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production # Use GitHub environments for better secret management
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-${{ github.sha }}
+
+      - name: Validate deployment secrets
+        run: |
+          echo "🔍 Validating deployment configuration..."
+
+          # Critical secrets validation
+          REQUIRED_SECRETS=(
+            "EC2_HOST" "EC2_USER" "EC2_SSH_KEY"
+            "DB_URI" "JWT_SECRET" "AWS_ACCESS_KEY_ID"
+            "AWS_SECRET_ACCESS_KEY" "REDIS_URL"
+          )
+
+          MISSING_SECRETS=()
+
+          for secret in "${REQUIRED_SECRETS[@]}"; do
+            case $secret in
+              EC2_HOST) [ -z "${{ secrets.EC2_HOST }}" ] && MISSING_SECRETS+=($secret) ;;
+              EC2_USER) [ -z "${{ secrets.EC2_USER }}" ] && MISSING_SECRETS+=($secret) ;;
+              EC2_SSH_KEY) [ -z "${{ secrets.EC2_SSH_KEY }}" ] && MISSING_SECRETS+=($secret) ;;
+              DB_URI) [ -z "${{ secrets.DB_URI }}" ] && MISSING_SECRETS+=($secret) ;;
+              JWT_SECRET) [ -z "${{ secrets.JWT_SECRET }}" ] && MISSING_SECRETS+=($secret) ;;
+              AWS_ACCESS_KEY_ID) [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] && MISSING_SECRETS+=($secret) ;;
+              AWS_SECRET_ACCESS_KEY) [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ] && MISSING_SECRETS+=($secret) ;;
+              REDIS_URL) [ -z "${{ secrets.REDIS_URL }}" ] && MISSING_SECRETS+=($secret) ;;
+            esac
+          done
+
+          if [ ${#MISSING_SECRETS[@]} -ne 0 ]; then
+            echo "❌ Missing required secrets: ${MISSING_SECRETS[*]}"
             exit 1
           fi
 
-          if [[ -z "$JWT_SECRET" ]]; then
-            echo "❌ JWT_SECRET is not set"
-            exit 1
-          fi
+          echo "✅ All required secrets are configured"
 
-          if [[ -z "$AWS_ACCESS_KEY_ID" ]]; then
-            echo "❌ AWS_ACCESS_KEY_ID is not set"
-            exit 1
-          fi
-
-          if [[ -z "$REDIS_URL" ]]; then
-            echo "❌ REDIS_URL is not set"
-            exit 1
-          fi
-
-          echo "✅ All critical environment variables are set"
-          echo "📋 Environment summary:"
-          echo "- PORT: $PORT"
-          echo "- NODE_ENV: $NODE_ENV"
-          echo "- AWS_REGION: $AWS_REGION"
-          echo "- S3_BUCKET_NAME: $S3_BUCKET_NAME"
-          echo "- JWT_EXP_IN: $JWT_EXP_IN"
-          echo "- JWT_REFRESH_EXP_IN: $JWT_REFRESH_EXP_IN"
-          echo "- THIRTY_DAYS: $THIRTY_DAYS"
-          echo "- ARCJET_ENV: $ARCJET_ENV"
-
-          # Show masked values for security
-          echo "🔒 Masked sensitive values:"
-          echo "- DB_URI: $(echo $DB_URI | cut -c1-20)..."
-          echo "- JWT_SECRET length: $(echo $JWT_SECRET | wc -c) characters"
-          echo "- REDIS_TOKEN length: $(echo $REDIS_TOKEN | wc -c) characters"
-          echo "- AWS_SECRET_ACCESS_KEY length: $(echo $AWS_SECRET_ACCESS_KEY | wc -c) characters"
-          echo "- OPEN_AI_KEY: $(echo $OPEN_AI_KEY | cut -c1-15)..."
-          echo "- GEMINI_KEY: $(echo $GEMINI_KEY | cut -c1-15)..."
-      - run: npm install
-      - run: npm run build --if-present
-
-      - name: Package build
+      - name: Setup SSH
         run: |
-          mkdir deploy
-          cp -r dist deploy/
-          tar -czf deploy.tar.gz -C deploy .
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Add EC2 host to known_hosts to avoid interactive prompts
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Setup SSH key
+      - name: Deploy to EC2
         run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" > private_key.pem
-          chmod 400 private_key.pem
+          echo "🚀 Starting deployment to EC2..."
 
-      - name: Copy build to EC2
-        run: |
-          scp -i private_key.pem -o StrictHostKeyChecking=no deploy.tar.gz ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ubuntu/
+          # Copy deployment package
+          scp -i ~/.ssh/deploy_key deploy.tar.gz ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/tmp/
 
-      - name: Deploy on EC2
-        run: |
-          ssh -i private_key.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'REMOTE'
-            set -e
-            cd /home/ubuntu/localhost-backend
-
-            git pull origin master
-
-            # Cleanup old dist
-            rm -rf dist
-
-            # Extract new build
-            tar -xzf ~/deploy.tar.gz -C /home/ubuntu/localhost-backend
-            rm ~/deploy.tar.gz
-
-            npm ci
-
-            # Install production deps (fallback if npm ci fails)
-            if ! npm ci --omit=dev --prefer-offline; then
-              npm install --omit=dev
+          # Execute deployment on remote server
+          ssh -i ~/.ssh/deploy_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'REMOTE_SCRIPT'
+            set -euo pipefail  # Exit on error, undefined vars, pipe failures
+            
+            echo "📦 Preparing deployment directory..."
+            APP_DIR="/home/ubuntu/localhost-backend"
+            BACKUP_DIR="/home/ubuntu/backups/$(date +%Y%m%d_%H%M%S)"
+            
+            # Create backup of current deployment
+            if [ -d "$APP_DIR" ]; then
+              echo "💾 Creating backup..."
+              mkdir -p "$(dirname "$BACKUP_DIR")"
+              cp -r "$APP_DIR" "$BACKUP_DIR"
             fi
-
-          # Update env file
-          cat > .env.production <<'ENVVARS'
-          PORT=${{ secrets.PORT }}
+            
+            # Ensure app directory exists
+            mkdir -p "$APP_DIR"
+            cd "$APP_DIR"
+            
+            echo "📥 Extracting new build..."
+            # Clean previous dist
+            rm -rf dist
+            # Extract new build
+            tar -xzf /tmp/deploy.tar.gz -C .
+            rm /tmp/deploy.tar.gz
+            
+            echo "📦 Installing dependencies..."
+            # Install production dependencies
+            npm ci --omit=dev --prefer-offline
+            
+            echo "⚙️ Updating configuration..."
+            # Create production environment file with proper escaping
+            cat > .env.production << 'EOF'
+          PORT=${{ secrets.PORT || '3000' }}
           NODE_ENV=production
           DB_URI=${{ secrets.DB_URI }}
           JWT_SECRET=${{ secrets.JWT_SECRET }}
-          JWT_EXP_IN=${{ secrets.JWT_EXP_IN }}
+          JWT_EXP_IN=${{ secrets.JWT_EXP_IN || '24h' }}
           ARCJET_ENV=${{ secrets.ARCJET_ENV }}
           ARCJET_KEY=${{ secrets.ARCJET_KEY }}
           REDIS_TOKEN=${{ secrets.REDIS_TOKEN }}
@@ -141,35 +161,68 @@ jobs:
           REDIS_URL=${{ secrets.REDIS_URL }}
           REDIS_TCP=${{ secrets.REDIS_TCP }}
           JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
-          JWT_REFRESH_EXP_IN=${{ secrets.JWT_REFRESH_EXP_IN }}
+          JWT_REFRESH_EXP_IN=${{ secrets.JWT_REFRESH_EXP_IN || '30d' }}
           AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION=${{ secrets.AWS_REGION }}
+          AWS_REGION=${{ secrets.AWS_REGION || 'us-east-1' }}
           S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
           OPEN_AI_KEY=${{ secrets.OPEN_AI_KEY }}
           GEMINI_KEY=${{ secrets.GEMINI_KEY }}
-          THIRTY_DAYS=${{ secrets.THIRTY_DAYS }}
-          ENVVARS
-
-            # Restart app
-            if ! command -v pm2 >/dev/null 2>&1; then
-              sudo npm install -g @socket.io/pm2
-            fi
-
-            export NODE_ENV=production
+          THIRTY_DAYS=${{ secrets.THIRTY_DAYS || '30' }}
+          EOF
             
-            # Stop existing processes
-            pm2 stop localhost-backend 2>/dev/null || true
-            pm2 delete localhost-backend 2>/dev/null || true
-
-            # Start the application
-            pm2 start ecosystem.config.cjs --env production
-
-            # Save PM2 configuration
+            echo "🔄 Managing application process..."
+            # Install PM2 globally if not present
+            if ! command -v pm2 >/dev/null 2>&1; then
+              echo "📥 Installing PM2..."
+              sudo npm install -g pm2
+            fi
+            
+            # Graceful process management
+            if pm2 describe localhost-backend >/dev/null 2>&1; then
+              echo "🔄 Reloading existing application..."
+              pm2 reload localhost-backend --env production
+            else
+              echo "🆕 Starting new application..."
+              pm2 start ecosystem.config.cjs --name localhost-backend --env production
+            fi
+            
+            # Save PM2 configuration and setup startup
             pm2 save
+            pm2 startup systemd -u $USER --hp $HOME 2>/dev/null || true
+            
+            echo "✅ Deployment verification..."
+            pm2 status localhost-backend
+            
+            # Health check
+            sleep 5
+            if pm2 describe localhost-backend | grep -q "online"; then
+              echo "🎉 Deployment completed successfully!"
+            else
+              echo "❌ Application failed to start properly"
+              pm2 logs localhost-backend --lines 50
+              exit 1
+            fi
+            
+            # Cleanup old backups (keep last 5)
+            if [ -d "/home/ubuntu/backups" ]; then
+              cd /home/ubuntu/backups
+              ls -t | tail -n +6 | xargs -r rm -rf
+            fi
+          REMOTE_SCRIPT
 
-            # Show status for verification
-            pm2 status
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+          rm -f deploy.tar.gz
 
-            echo "Deployment completed successfully"
-          REMOTE
+      - name: Deployment notification
+        if: success()
+        run: |
+          echo "🎉 Deployment to production completed successfully!"
+          echo "📊 Deployment details:"
+          echo "- Commit: ${{ github.sha }}"
+          echo "- Branch: ${{ github.ref_name }}"
+          echo "- Triggered by: ${{ github.actor }}"
+          echo "- Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
