@@ -74,9 +74,10 @@ app.use("/api/v1/conversations", conversationRouter);
 
 app.use(globalErrorMiddleware);
 
-io.adapter(createAdapter());
-
-setupWorker(io);
+if (process.env.NODE_ENV === "production") {
+  io.adapter(createAdapter());
+  setupWorker(io);
+}
 
 initializeSockets(io);
 
