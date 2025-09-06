@@ -7,7 +7,7 @@ on:
   workflow_dispatch: # Allow manual triggers
 
 env:
-  NODE_VERSION: "24.4.1"
+  NODE_VERSION: "22.17.0"
   DEPLOY_DIR: "deploy"
 
 jobs:
