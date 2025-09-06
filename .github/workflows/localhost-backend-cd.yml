@@ -7,7 +7,7 @@ on:
   workflow_dispatch: # Allow manual triggers
 
 env:
-  NODE_VERSION: "24.x"
+  NODE_VERSION: "24.4.1"
   DEPLOY_DIR: "deploy"
 
 jobs:
@@ -54,7 +54,7 @@ jobs:
         with:
           name: build-${{ github.sha }}
           path: deploy.tar.gz
-          retention-days: 7
+          retention-days: 1
 
   deploy:
     name: Deploy to EC2
@@ -149,7 +149,7 @@ jobs:
             echo "⚙️ Updating configuration..."
             # Create production environment file with proper escaping
             cat > .env.production << 'EOF'
-          PORT=${{ secrets.PORT || '3000' }}
+          PORT=${{ secrets.PORT || '5500' }}
           NODE_ENV=production
           DB_URI=${{ secrets.DB_URI }}
           JWT_SECRET=${{ secrets.JWT_SECRET }}
