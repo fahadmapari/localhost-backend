@@ -144,7 +144,7 @@ jobs:
             
             echo "📦 Installing dependencies..."
             # Install production dependencies
-            npm ci --omit=dev --prefer-offline
+            npm ci --prefer-offline
             
             echo "⚙️ Updating configuration..."
             # Create production environment file with proper escaping
