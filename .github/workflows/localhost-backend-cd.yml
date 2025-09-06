@@ -28,7 +28,7 @@ jobs:
           cache: "npm"
 
       - name: Install dependencies
-        run: npm ci --prefer-offline
+        run: npm ci
 
       - name: Build application
         run: npm run build --if-present
@@ -144,7 +144,7 @@ jobs:
             
             echo "📦 Installing dependencies..."
             # Install production dependencies
-            npm ci --prefer-offline
+            npm ci
             
             echo "⚙️ Updating configuration..."
             # Create production environment file with proper escaping
