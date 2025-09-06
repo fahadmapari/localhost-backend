@@ -175,13 +175,13 @@ jobs:
             # Install PM2 globally if not present
             if ! command -v pm2 >/dev/null 2>&1; then
               echo "📥 Installing PM2..."
-              sudo npm install -g pm2
+              sudo npm install -g @socket.io/pm2
             fi
             
             # Graceful process management
             if pm2 describe localhost-backend >/dev/null 2>&1; then
               echo "🔄 Reloading existing application..."
-              pm2 reload localhost-backend --env production
+              pm2 reload all
             else
               echo "🆕 Starting new application..."
               pm2 start ecosystem.config.cjs --name localhost-backend --env production
