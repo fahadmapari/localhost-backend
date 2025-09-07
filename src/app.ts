@@ -62,7 +62,10 @@ app.use(arcjetMiddleware);
 app.use(compression());
 
 app.get("/", (req, res) => {
-  res.status(200).json({ message: "Hello World" });
+  res.status(200).json({
+    status: "ok",
+    env: process.env.NODE_ENV,
+  });
 });
 
 app.use("/api/v1/users", userRouter);
