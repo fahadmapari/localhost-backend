@@ -178,14 +178,12 @@ jobs:
               sudo npm install -g pm2
             fi
             
-            # Graceful process management
-            if pm2 describe localhost-backend >/dev/null 2>&1; then
-              echo "🔄 Reloading existing application..."
-              pm2 reload all
-            else
-              echo "🆕 Starting new application..."
-              pm2 start ecosystem.config.cjs --name localhost-backend --env production
-            fi
+            
+            pm2 kill
+           
+            echo "🆕 Starting new application..."
+            pm2 start ecosystem.config.cjs --name localhost-backend --env production
+           
             
             # Save PM2 configuration and setup startup
             pm2 save
