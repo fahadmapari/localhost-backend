@@ -17,8 +17,16 @@ import conversationRouter from "./routes/conversation.routes";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
 import { initializeSockets, periodicRoomCleanup } from "./config/sockets";
-import { setupWorker } from "@socket.io/sticky";
-import { createAdapter } from "@socket.io/cluster-adapter";
+import { createAdapter } from "@socket.io/redis-adapter";
+import { getNodeRedisClient } from "./config/redis";
+
+const pubClient = getNodeRedisClient();
+const subClient = pubClient.duplicate();
+
+Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+  io.adapter(createAdapter(pubClient, subClient));
+  console.log("Redis adapter connected");
+});
 
 const app = express();
 const serverForSocket = createServer(app);
@@ -77,10 +85,7 @@ app.use("/api/v1/conversations", conversationRouter);
 
 app.use(globalErrorMiddleware);
 
-if (process.env.NODE_ENV === "production") {
-  io.adapter(createAdapter());
-  setupWorker(io);
-}
+io.adapter(createAdapter(pubClient, subClient));
 
 initializeSockets(io);
 

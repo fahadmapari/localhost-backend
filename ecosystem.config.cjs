@@ -3,13 +3,13 @@ module.exports = {
     {
       name: "localhost-backend",
       script: "dist/app.js", // or app.js
-      instances: "max", // run workers = CPU cores
-      exec_mode: "cluster", // enables zero-downtime reloads
+      instances: 2, // run workers = CPU cores
+      exec_mode: "fork", // enables zero-downtime reloads
       autorestart: true,
       max_memory_restart: "300M",
       watch: false,
       env: {
-        PORT: process.env.PORT,
+        PORT: 5500,
         NODE_ENV: "production",
         DB_URI: process.env.DB_URI,
         JWT_SECRET: process.env.JWT_SECRET,
@@ -30,7 +30,7 @@ module.exports = {
         THIRTY_DAYS: process.env.THIRTY_DAYS,
       },
       env_production: {
-        PORT: process.env.PORT,
+        PORT: 5500,
         NODE_ENV: "production",
         DB_URI: process.env.DB_URI,
         JWT_SECRET: process.env.JWT_SECRET,
