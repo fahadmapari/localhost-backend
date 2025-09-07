@@ -19,6 +19,7 @@ import { createServer } from "node:http";
 import { initializeSockets, periodicRoomCleanup } from "./config/sockets";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { getNodeRedisClient } from "./config/redis";
+import bookingRouter from "./routes/booking.routes";
 
 const pubClient = getNodeRedisClient();
 const subClient = pubClient.duplicate();
@@ -82,6 +83,7 @@ app.use("/api/v1/products", productRouter);
 app.use("/api/v1/clients", clientRouter);
 app.use("/api/v1/admins", adminRouter);
 app.use("/api/v1/conversations", conversationRouter);
+app.use("/api/v1/bookings", bookingRouter);
 
 app.use(globalErrorMiddleware);
 
