@@ -36,7 +36,9 @@ export const getAllConversationsOfUserService = async (userId: string) => {
   try {
     const conversations = await Conversation.find({
       $or: [{ participants: userId }, { createdBy: userId }],
-    }).populate("participants");
+    })
+      .populate("participants lastMessage")
+      .lean();
     return conversations;
   } catch (error) {
     throw error;
@@ -67,7 +69,7 @@ export const createNewMessageService = async (
   sender: string
 ) => {
   try {
-    const conversation = await Conversation.findById(conversationId).lean();
+    const conversation = await Conversation.findById(conversationId);
 
     if (!conversation) {
       throw createError("conversation not found", 404);
@@ -78,6 +80,8 @@ export const createNewMessageService = async (
       sender,
       text: message,
     });
+
+    await conversation.updateOne({ $set: { lastMessage: newMessage._id } });
 
     return newMessage;
   } catch (error) {
