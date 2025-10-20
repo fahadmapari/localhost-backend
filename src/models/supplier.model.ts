@@ -5,11 +5,6 @@ const supplierSchema = new mongoose.Schema(
   {
     // Personal Information
     personalInfo: {
-      title: {
-        type: String,
-        enum: ["Mr", "Mrs", "Ms", "Dr", "Prof"],
-        required: true,
-      },
       firstName: {
         type: String,
         required: true,
@@ -156,6 +151,7 @@ const supplierSchema = new mongoose.Schema(
         twitter: String,
         tiktok: String,
       },
+      tripAdvisor: String,
       profileVideo: String, // URL
       otherProfile: String, // URL
       sampleTourVideo: String, // URL
@@ -290,7 +286,7 @@ const supplierSchema = new mongoose.Schema(
         type: Boolean,
         default: false,
       },
-      confirmed: {
+      contracted: {
         type: Boolean,
         default: false,
       },
@@ -298,7 +294,10 @@ const supplierSchema = new mongoose.Schema(
         type: Boolean,
         default: false,
       },
-      vatAmount: Number,
+      vatAmount: {
+        type: Boolean,
+        default: false,
+      },
       commission: {
         type: Boolean,
         default: false,
