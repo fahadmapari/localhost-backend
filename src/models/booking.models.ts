@@ -88,6 +88,11 @@ const bookingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   },
+  paymentStatus: {
+    type: String,
+    enum: ["unpaid", "paid", "partiallyPaid"],
+    default: "unpaid",
+  },
 });
 
 const Booking = mongoose.model("Booking", bookingSchema);

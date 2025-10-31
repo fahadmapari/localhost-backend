@@ -3,11 +3,25 @@ import {
   createBookingController,
   getBookingsController,
 } from "../controllers/booking.controller";
+import {
+  authorizationMiddleware,
+  isAdminMiddleware,
+} from "../middlewares/auth.middleware";
 
 const bookingRouter = Router();
 
-bookingRouter.get("/", getBookingsController);
+bookingRouter.get(
+  "/",
+  authorizationMiddleware,
+  isAdminMiddleware,
+  getBookingsController
+);
 
-bookingRouter.post("/", createBookingController);
+bookingRouter.post(
+  "/",
+  authorizationMiddleware,
+  isAdminMiddleware,
+  createBookingController
+);
 
 export default bookingRouter;
