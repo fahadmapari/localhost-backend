@@ -113,42 +113,8 @@ jobs:
         run: |
           echo "🚀 Starting deployment to EC2..."
 
-          # Copy deployment package
-          scp -i ~/.ssh/deploy_key deploy.tar.gz ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/tmp/
-
-          # Execute deployment on remote server
-          ssh -i ~/.ssh/deploy_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'REMOTE_SCRIPT'
-            set -euo pipefail  # Exit on error, undefined vars, pipe failures
-            
-            echo "📦 Preparing deployment directory..."
-            APP_DIR="/home/ubuntu/localhost-backend"
-            BACKUP_DIR="/home/ubuntu/backups/$(date +%Y%m%d_%H%M%S)"
-            
-            # Create backup of current deployment
-            if [ -d "$APP_DIR" ]; then
-              echo "💾 Creating backup..."
-              mkdir -p "$(dirname "$BACKUP_DIR")"
-              cp -r "$APP_DIR" "$BACKUP_DIR"
-            fi
-            
-            # Ensure app directory exists
-            mkdir -p "$APP_DIR"
-            cd "$APP_DIR"
-            
-            echo "📥 Extracting new build..."
-            # Clean previous dist
-            rm -rf dist
-            # Extract new build
-            tar -xzf /tmp/deploy.tar.gz -C .
-            rm /tmp/deploy.tar.gz
-            
-            echo "📦 Installing dependencies..."
-            # Install production dependencies
-            npm ci
-            
-            echo "⚙️ Updating configuration..."
-            # Create production environment file with proper escaping
-            cat > .env.production << 'EOF'
+          # Create env file locally (avoid baking secrets into artifacts)
+          cat > .env.production << EOF
           PORT=${{ secrets.PORT || '5500' }}
           NODE_ENV=production
           DB_URI=${{ secrets.DB_URI }}
@@ -170,6 +136,57 @@ jobs:
           GEMINI_KEY=${{ secrets.GEMINI_KEY }}
           THIRTY_DAYS=${{ secrets.THIRTY_DAYS || '30' }}
           EOF
+
+          # Copy deployment package
+          scp -i ~/.ssh/deploy_key deploy.tar.gz ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/tmp/
+          scp -i ~/.ssh/deploy_key .env.production ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/tmp/
+
+          # Execute deployment on remote server
+          ssh -i ~/.ssh/deploy_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'REMOTE_SCRIPT'
+            set -euo pipefail  # Exit on error, undefined vars, pipe failures
+            
+            echo "📦 Preparing deployment directory..."
+            APP_DIR="/home/ubuntu/localhost-backend"
+            BACKUP_DIR="/home/ubuntu/backups/$(date +%Y%m%d_%H%M%S)"
+            NODE_VERSION="${{ env.NODE_VERSION }}"
+            
+            # Create backup of current deployment
+            if [ -d "$APP_DIR" ]; then
+              echo "💾 Creating backup..."
+              mkdir -p "$(dirname "$BACKUP_DIR")"
+              cp -r "$APP_DIR" "$BACKUP_DIR"
+            fi
+            
+            # Ensure app directory exists
+            mkdir -p "$APP_DIR"
+            cd "$APP_DIR"
+            
+            echo "📥 Extracting new build..."
+            # Clean previous dist
+            rm -rf dist
+            # Extract new build
+            tar -xzf /tmp/deploy.tar.gz -C .
+            rm /tmp/deploy.tar.gz
+            
+            echo "📦 Installing dependencies..."
+            # Install production dependencies
+            npm ci --omit=dev
+            
+            echo "⚙️ Updating configuration..."
+            # Move env file created on runner
+            mv /tmp/.env.production ./.env.production
+
+            if [ -s "$HOME/.nvm/nvm.sh" ]; then
+              . "$HOME/.nvm/nvm.sh"
+            fi
+
+            echo "Ensuring Node version..."
+            if [ -n "$NODE_VERSION" ] && command -v nvm >/dev/null 2>&1; then
+              nvm install "$NODE_VERSION"
+              nvm use "$NODE_VERSION"
+            else
+              echo "Info: nvm not found or NODE_VERSION empty; using system node"
+            fi
             
             echo "🔄 Managing application process..."
             # Install PM2 globally if not present
@@ -179,10 +196,13 @@ jobs:
             fi
             
             
-            pm2 kill
            
             echo "🆕 Starting new application..."
-            pm2 start ecosystem.config.cjs --name localhost-backend --env production
+            if pm2 describe localhost-backend >/dev/null 2>&1; then
+              pm2 reload ecosystem.config.cjs --only localhost-backend --env production
+            else
+              pm2 start ecosystem.config.cjs --name localhost-backend --env production
+            fi
            
             
             # Save PM2 configuration and setup startup
@@ -191,6 +211,11 @@ jobs:
             
             echo "✅ Deployment verification..."
             pm2 status localhost-backend
+
+            # Optional HTTP check (non-fatal if curl not installed)
+            if command -v curl >/dev/null 2>&1; then
+              curl -fsS "http://127.0.0.1:${{ secrets.PORT || '5500' }}/health" || true
+            fi
             
             # Health check
             sleep 5
@@ -214,6 +239,7 @@ jobs:
         run: |
           rm -f ~/.ssh/deploy_key
           rm -f deploy.tar.gz
+          rm -f .env.production
 
       - name: Deployment notification
         if: success()

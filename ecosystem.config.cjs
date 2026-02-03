@@ -3,8 +3,8 @@ module.exports = {
     {
       name: "localhost-backend",
       script: "dist/app.js", // or app.js
-      instances: 2, // run workers = CPU cores
-      exec_mode: "fork", // enables zero-downtime reloads
+      instances: "max", // run one worker per core for reloads
+      exec_mode: "cluster", // enables zero-downtime reloads
       autorestart: true,
       max_memory_restart: "300M",
       watch: false,
