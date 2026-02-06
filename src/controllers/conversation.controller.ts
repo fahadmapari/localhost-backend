@@ -22,13 +22,11 @@ export const getConversationController: ExpressController = async (
 
     const conversation = await getConversationService(conversationId);
 
-    return sendResponse(
-      res,
-      "Conversation fetched successfully!",
-      true,
-      200,
-      conversation
-    );
+    return sendResponse(res, {
+      message: "Conversation fetched successfully!",
+      statusCode: 200,
+      data: conversation,
+    });
   } catch (error) {
     next(error);
   }
@@ -47,13 +45,11 @@ export const getAllMessagesForConversationController: ExpressController =
         conversationId
       );
 
-      return sendResponse(
-        res,
-        "All messages fetched successfully!",
-        true,
-        200,
-        messages
-      );
+      return sendResponse(res, {
+        message: "All messages fetched successfully!",
+        statusCode: 200,
+        data: messages,
+      });
     } catch (error) {
       next(error);
     }
@@ -71,13 +67,11 @@ export const getAllConversationsController: ExpressController = async (
 
     const conversations = await getAllConversationsOfUserService(req.user.id);
 
-    return sendResponse(
-      res,
-      "All conversations fetched successfully!",
-      true,
-      200,
-      conversations
-    );
+    return sendResponse(res, {
+      message: "All conversations fetched successfully!",
+      statusCode: 200,
+      data: conversations,
+    });
   } catch (error) {
     next(error);
   }
@@ -99,13 +93,11 @@ export const createNewConversationController: ExpressController = async (
       req.user.id
     );
 
-    return sendResponse(
-      res,
-      "Conversation created successfully!",
-      true,
-      200,
-      conversation
-    );
+    return sendResponse(res, {
+      message: "Conversation created successfully!",
+      statusCode: 200,
+      data: conversation,
+    });
   } catch (error) {
     next(error);
   }

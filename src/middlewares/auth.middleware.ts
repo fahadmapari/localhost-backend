@@ -20,7 +20,10 @@ export const authorizationMiddleware: ExpressController = async (
     }
 
     if (!token) {
-      return sendResponse(res, "Unauthorized", false, 401);
+      return sendResponse(res, {
+        message: "Unauthorized",
+        statusCode: 401,
+      });
     }
 
     const decoded: any = jwt.verify(token, JWT_SECRET as string);
@@ -33,12 +36,10 @@ export const authorizationMiddleware: ExpressController = async (
     next();
   } catch (error: any) {
     console.log(error);
-    return sendResponse(
-      res,
-      error?.message || "Unauthorized",
-      false,
-      error?.statusCode || 401
-    );
+    return sendResponse(res, {
+      message: error?.message || "Unauthorized",
+      statusCode: error?.statusCode || 401,
+    });
   }
 };
 
@@ -50,6 +51,9 @@ export const isAdminMiddleware: ExpressController = async (req, res, next) => {
 
     throw createError("Forbidden", 403);
   } catch (error: any) {
-    return sendResponse(res, "Forbidden", false, error?.statusCode || 403);
+    return sendResponse(res, {
+      message: "Forbidden",
+      statusCode: error?.statusCode || 403,
+    });
   }
 };

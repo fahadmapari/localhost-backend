@@ -49,7 +49,10 @@ export const signIn: ExpressController = async (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return sendResponse(res, "Invalid request", false, 400);
+      return sendResponse(res, {
+        message: "Invalid request",
+        statusCode: 400,
+      });
     }
 
     const { accessToken, refreshToken, user } = await siginInUser(
@@ -86,7 +89,10 @@ export const refreshToken: ExpressController = async (req, res, next) => {
     const refreshToken: string = req.cookies.refreshToken || req.body.token;
 
     if (!refreshToken) {
-      return sendResponse(res, "Refresh token is required", false, 401);
+      return sendResponse(res, {
+        message: "Refresh token is required",
+        statusCode: 401,
+      });
     }
 
     const data = await refreshAccessToken(refreshToken);
@@ -98,9 +104,13 @@ export const refreshToken: ExpressController = async (req, res, next) => {
       maxAge: 30 * 60 * 1000,
     });
 
-    sendResponse(res, "Token refreshed successfully", true, 200, {
-      accessToken: data.accessToken,
-      user: data.user,
+    sendResponse(res, {
+      message: "Token refreshed successfully",
+      statusCode: 200,
+      data: {
+        accessToken: data.accessToken,
+        user: data.user,
+      },
     });
   } catch (error) {
     console.log(error);
@@ -115,12 +125,18 @@ export const verifyToken: ExpressController = async (req, res, next) => {
       : null;
 
     if (!token) {
-      return sendResponse(res, "Invalid request", false, 401);
+      return sendResponse(res, {
+        message: "Invalid request",
+        statusCode: 401,
+      });
     }
 
     await verifyAccessToken(token);
 
-    sendResponse(res, "Request successful", true, 200);
+    sendResponse(res, {
+      message: "Request successful",
+      statusCode: 200,
+    });
   } catch (error) {
     next(error);
   }
@@ -132,16 +148,25 @@ export const logout: ExpressController = async (req, res, next) => {
 
     if (!refreshToken) {
       res.clearCookie("accessToken").clearCookie("refreshToken");
-      return sendResponse(res, "Logged out successfully", true, 204);
+      return sendResponse(res, {
+        message: "Logged out successfully",
+        statusCode: 204,
+      });
     }
 
     await revokeRefreshToken(refreshToken);
 
     res.clearCookie("accessToken").clearCookie("refreshToken");
 
-    sendResponse(res, "Logged out successfully", true, 200);
+    sendResponse(res, {
+      message: "Logged out successfully",
+      statusCode: 200,
+    });
   } catch (error) {
     res.clearCookie("accessToken").clearCookie("refreshToken");
-    sendResponse(res, "Logged out successfully", true, 200);
+    sendResponse(res, {
+      message: "Logged out successfully",
+      statusCode: 200,
+    });
   }
 };

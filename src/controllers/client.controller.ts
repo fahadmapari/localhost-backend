@@ -15,13 +15,11 @@ export const getAllClientsController: ExpressController = async (
 ) => {
   try {
     const clients = await getAllClientsService();
-    return sendResponse(
-      res,
-      "Clients fetched successfully",
-      true,
-      200,
-      clients
-    );
+    return sendResponse(res, {
+      message: "Clients fetched successfully",
+      statusCode: 200,
+      data: clients,
+    });
   } catch (error) {
     next(error);
   }
@@ -34,13 +32,11 @@ export const getClientMetricsController: ExpressController = async (
 ) => {
   try {
     const metrics = await getClientMetricsService();
-    return sendResponse(
-      res,
-      "Metrics fetched successfully",
-      true,
-      200,
-      metrics
-    );
+    return sendResponse(res, {
+      message: "Metrics fetched successfully",
+      statusCode: 200,
+      data: metrics,
+    });
   } catch (error) {
     next(error);
   }
@@ -60,13 +56,11 @@ export const getClientListController: ExpressController = async (
 
     const clients = await getClientListService(page as number, limit as number);
 
-    return sendResponse(
-      res,
-      "Clients fetched successfully",
-      true,
-      200,
-      clients
-    );
+    return sendResponse(res, {
+      message: "Clients fetched successfully",
+      statusCode: 200,
+      data: clients,
+    });
   } catch (error) {
     next(error);
   }
@@ -81,19 +75,21 @@ export const createClientController: ExpressController = async (
     const paredBody = clientSchema.safeParse(req.body);
 
     if (paredBody.error) {
-      return sendResponse(res, "Invalid Fields", false, 400, {
-        error: paredBody.error,
+      return sendResponse(res, {
+        message: "Invalid Fields",
+        statusCode: 400,
+        data: {
+          error: paredBody.error,
+        },
       });
     }
     const registeredClient = await registerClientService(paredBody.data);
 
-    sendResponse(
-      res,
-      "Client registered successfully",
-      true,
-      200,
-      registeredClient
-    );
+    sendResponse(res, {
+      message: "Client registered successfully",
+      statusCode: 200,
+      data: registeredClient,
+    });
   } catch (error) {
     next(error);
   }

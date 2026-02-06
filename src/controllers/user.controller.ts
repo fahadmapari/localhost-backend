@@ -5,7 +5,11 @@ import { sendResponse } from "../utils/controller";
 export const getAllUsers: ExpressController = async (req, res, next) => {
   try {
     const users = await getAllRegisteredUsers();
-    sendResponse(res, "Request successful", true, 200, users);
+    sendResponse(res, {
+      message: "Request successful",
+      statusCode: 200,
+      data: users,
+    });
   } catch (error) {
     next(error);
   }
@@ -16,12 +20,19 @@ export const getUser: ExpressController = async (req, res, next) => {
     const { id } = req.params;
 
     if (id !== req.user?.id) {
-      return sendResponse(res, "Unauthorized", false, 401);
+      return sendResponse(res, {
+        message: "Unauthorized",
+        statusCode: 401,
+      });
     }
 
     const user = await getUserById(id);
 
-    sendResponse(res, "Request successful", true, 200, user);
+    sendResponse(res, {
+      message: "Request successful",
+      statusCode: 200,
+      data: user,
+    });
   } catch (error) {
     next(error);
   }

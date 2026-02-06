@@ -10,19 +10,31 @@ export const arcjetMiddleware: RequestHandler = async (req, res, next) => {
 
     if (decision.isDenied()) {
       if (decision.reason.isRateLimit()) {
-        return sendResponse(res, "Rate limit exceeded", false, 429);
+        return sendResponse(res, {
+          message: "Rate limit exceeded",
+          statusCode: 429,
+        });
       }
 
       if (decision.reason.isBot()) {
-        return sendResponse(res, "Bot access denied", false, 403);
+        return sendResponse(res, {
+          message: "Bot access denied",
+          statusCode: 403,
+        });
       }
 
-      return sendResponse(res, "Access denied", false, 403);
+      return sendResponse(res, {
+        message: "Access denied",
+        statusCode: 403,
+      });
     }
 
     next();
   } catch (error) {
     console.error("Arcjet middleware error:", error);
-    return sendResponse(res, "Internal Server Error", false, 500);
+    return sendResponse(res, {
+      message: "Internal Server Error",
+      statusCode: 500,
+    });
   }
 };

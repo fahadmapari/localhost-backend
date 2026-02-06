@@ -28,8 +28,12 @@ export const editProductById: ExpressController = async (req, res, next) => {
     const parsedBody = editProductZodSchema.safeParse(parsedObject);
 
     if (parsedBody.error) {
-      return sendResponse(res, "Invalid Fields", false, 400, {
-        error: parsedBody.error,
+      return sendResponse(res, {
+        message: "Invalid Fields",
+        statusCode: 400,
+        data: {
+          error: parsedBody.error,
+        },
       });
     }
 
@@ -39,7 +43,11 @@ export const editProductById: ExpressController = async (req, res, next) => {
       req.files as Express.Multer.File[]
     );
 
-    sendResponse(res, "Product fetched successfully", true, 200, product);
+    sendResponse(res, {
+      message: "Product fetched successfully",
+      statusCode: 200,
+      data: product,
+    });
   } catch (error) {
     next(error);
   }
@@ -52,7 +60,11 @@ export const getProductById: ExpressController = async (req, res, next) => {
     }
     const product = await findProductById(req.params.id);
 
-    sendResponse(res, "Product fetched successfully", true, 200, product);
+    sendResponse(res, {
+      message: "Product fetched successfully",
+      statusCode: 200,
+      data: product,
+    });
   } catch (error) {
     next(error);
   }
@@ -74,8 +86,12 @@ export const getProducts: ExpressController = async (req, res, next) => {
       searchTerm.toString()
     );
 
-    sendResponse(res, "Products fetched successfully", true, 200, {
-      productsData: products,
+    sendResponse(res, {
+      message: "Products fetched successfully",
+      statusCode: 200,
+      data: {
+        productsData: products,
+      },
     });
   } catch (error) {
     console.log(error);
@@ -89,14 +105,21 @@ export const getProductMetrics: ExpressController = async (req, res, next) => {
     const etag = generateETag(metrics);
 
     if (req.headers["if-none-match"] === etag) {
-      return sendResponse(res, "Metrics not modified", true, 304);
+      return sendResponse(res, {
+        message: "Metrics not modified",
+        statusCode: 304,
+      });
     }
 
     res.set({
       "Cache-Control": "private, max-age=3600",
       ETag: generateETag(metrics),
     });
-    sendResponse(res, "Metrics fetched successfully", true, 200, metrics);
+    sendResponse(res, {
+      message: "Metrics fetched successfully",
+      statusCode: 200,
+      data: metrics,
+    });
   } catch (error) {
     console.log(error);
     next(error);
@@ -114,8 +137,12 @@ export const addProduct: ExpressController = async (req, res, next) => {
 
     if (!parsedBody.success) {
       console.log(parsedBody.error);
-      return sendResponse(res, "Invalid Fields", false, 400, {
-        error: parsedBody.error,
+      return sendResponse(res, {
+        message: "Invalid Fields",
+        statusCode: 400,
+        data: {
+          error: parsedBody.error,
+        },
       });
     }
 
@@ -126,8 +153,12 @@ export const addProduct: ExpressController = async (req, res, next) => {
 
     const newProduct = await addNewProduct(parsedBody.data, images);
 
-    sendResponse(res, "Product added successfully", true, 200, {
-      product: newProduct,
+    sendResponse(res, {
+      message: "Product added successfully",
+      statusCode: 200,
+      data: {
+        product: newProduct,
+      },
     });
   } catch (error) {
     next(error);
@@ -146,13 +177,11 @@ export const searchProductController: ExpressController = async (
 
     const products = await searchProuductsByTextService(req.body.searchTerm);
 
-    return sendResponse(
-      res,
-      "Products fetched successfully",
-      true,
-      200,
-      products
-    );
+    return sendResponse(res, {
+      message: "Products fetched successfully",
+      statusCode: 200,
+      data: products,
+    });
   } catch (error) {
     next(error);
   }

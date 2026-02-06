@@ -1,16 +1,33 @@
 import { Response } from "express";
 
-export const sendResponse = (
+type SendResponseOptions<T> = {
+  statusCode?: number;
+  message?: string;
+  success?: boolean;
+  data?: T;
+};
+
+export const sendResponse = <T>(
   response: Response,
-  message: string,
-  success: boolean,
-  statusCode: number,
-  data?: any
-) => {
-  response.status(statusCode).json({
-    success: success,
-    message: message || (success ? "Request successful" : "Request failed"),
-    data,
-  });
-  return;
+  { statusCode = 200, message, success, data }: SendResponseOptions<T>
+): void => {
+  const resolvedSuccess = success ?? statusCode < 400;
+  const resolvedMessage =
+    message || (resolvedSuccess ? "Request successful" : "Request failed");
+
+  if (statusCode === 204 || statusCode === 304) {
+    response.status(statusCode).end();
+    return;
+  }
+
+  const payload: { success: boolean; message: string; data?: T } = {
+    success: resolvedSuccess,
+    message: resolvedMessage,
+  };
+
+  if (data !== undefined) {
+    payload.data = data;
+  }
+
+  response.status(statusCode).json(payload);
 };
