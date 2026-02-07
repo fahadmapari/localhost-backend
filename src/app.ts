@@ -21,14 +21,6 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import { getNodeRedisClient } from "./config/redis";
 import bookingRouter from "./routes/booking.routes";
 
-const pubClient = getNodeRedisClient();
-const subClient = pubClient.duplicate();
-
-Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
-  io.adapter(createAdapter(pubClient, subClient));
-  console.log("Redis adapter connected");
-});
-
 const app = express();
 const serverForSocket = createServer(app);
 const io = new Server(serverForSocket, {
@@ -43,6 +35,14 @@ const io = new Server(serverForSocket, {
     ],
     credentials: true,
   },
+});
+
+const pubClient = getNodeRedisClient();
+const subClient = pubClient.duplicate();
+
+Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
+  io.adapter(createAdapter(pubClient, subClient));
+  console.log("Redis adapter connected");
 });
 
 app.set("trust proxy", true);
