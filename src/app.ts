@@ -37,14 +37,6 @@ const io = new Server(serverForSocket, {
   },
 });
 
-const pubClient = getNodeRedisClient();
-const subClient = pubClient.duplicate();
-
-Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
-  io.adapter(createAdapter(pubClient, subClient));
-  console.log("Redis adapter connected");
-});
-
 app.set("trust proxy", true);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -87,16 +79,24 @@ app.use("/api/v1/bookings", bookingRouter);
 
 app.use(globalErrorMiddleware);
 
-initializeSockets(io);
+async function startServer() {
+  const pubClient = getNodeRedisClient();
+  const subClient = pubClient.duplicate();
 
-setInterval(
-  () => periodicRoomCleanup(io),
-  // 30 minutes
-  30 * 60 * 1000,
-);
+  await Promise.all([pubClient.connect(), subClient.connect()]);
 
-connectDB().then(() => {
+  io.adapter(createAdapter(pubClient, subClient));
+  console.log("✅ Redis adapter connected");
+
+  initializeSockets(io);
+
+  setInterval(() => periodicRoomCleanup(io), 30 * 60 * 1000);
+
+  await connectDB();
+
   serverForSocket.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
-});
+}
+
+startServer();
