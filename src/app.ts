@@ -63,7 +63,7 @@ app.use(
       "https://admin.localhostapp.in",
     ], // frontend port
     credentials: true, // if using cookies
-  })
+  }),
 );
 
 app.use(arcjetMiddleware);
@@ -87,14 +87,12 @@ app.use("/api/v1/bookings", bookingRouter);
 
 app.use(globalErrorMiddleware);
 
-io.adapter(createAdapter(pubClient, subClient));
-
 initializeSockets(io);
 
 setInterval(
   () => periodicRoomCleanup(io),
   // 30 minutes
-  30 * 60 * 1000
+  30 * 60 * 1000,
 );
 
 connectDB().then(() => {
