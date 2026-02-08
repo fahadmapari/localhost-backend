@@ -79,6 +79,7 @@ app.use("/api/v1/bookings", bookingRouter);
 
 app.use(globalErrorMiddleware);
 
+// server boot
 async function startServer() {
   const pubClient = getNodeRedisClient();
   const subClient = pubClient.duplicate();
