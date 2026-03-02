@@ -23,7 +23,7 @@ export const editProductById: ExpressController = async (req, res, next) => {
       throw createError("Product id is required", 400);
     }
 
-    const parsedObject = parseNestedObject(req.body);
+    const parsedObject = parseNestedObject(req.body.payload);
 
     const parsedBody = editProductZodSchema.safeParse(parsedObject);
 
@@ -40,7 +40,7 @@ export const editProductById: ExpressController = async (req, res, next) => {
     const product = await updateProductById(
       req.params.id,
       parsedBody.data,
-      req.files as Express.Multer.File[]
+      req.files as Express.Multer.File[],
     );
 
     sendResponse(res, {
@@ -83,7 +83,7 @@ export const getProducts: ExpressController = async (req, res, next) => {
       Number(page),
       Number(limit) < 100 ? Number(limit) : 100,
       bookingType.toString(),
-      searchTerm.toString()
+      searchTerm.toString(),
     );
 
     sendResponse(res, {
@@ -131,9 +131,8 @@ export const addProduct: ExpressController = async (req, res, next) => {
     if (!req.files || req.files.length === 0) {
       throw createError("No files uploaded", 400);
     }
-    const parsedObject = parseNestedObject(req.body);
 
-    const parsedBody = productZodSchema.safeParse(parsedObject);
+    const parsedBody = productZodSchema.safeParse(JSON.parse(req.body.payload));
 
     if (!parsedBody.success) {
       console.log(parsedBody.error);
@@ -148,7 +147,7 @@ export const addProduct: ExpressController = async (req, res, next) => {
 
     const images = await uploadProductImages(
       req.files as Express.Multer.File[],
-      parsedBody.data.title
+      parsedBody.data.title,
     );
 
     const newProduct = await addNewProduct(parsedBody.data, images);
@@ -161,6 +160,7 @@ export const addProduct: ExpressController = async (req, res, next) => {
       },
     });
   } catch (error) {
+    console.log(error);
     next(error);
   }
 };
@@ -168,7 +168,7 @@ export const addProduct: ExpressController = async (req, res, next) => {
 export const searchProductController: ExpressController = async (
   req,
   res,
-  next
+  next,
 ) => {
   try {
     if (!req.body.searchTerm) {
