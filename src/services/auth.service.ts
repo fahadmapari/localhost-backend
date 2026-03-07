@@ -10,7 +10,6 @@ import {
   JWT_SECRET,
   THIRTY_DAYS,
 } from "../config/env";
-import ms from "ms";
 import crypto from "crypto";
 import redisClient from "../config/redis";
 import {
@@ -26,7 +25,7 @@ export const signupUser = async (
   name: string,
   email: string,
   password: string,
-  role: string
+  role: string,
 ): Promise<{
   accessToken: string;
   refreshToken: string;
@@ -50,7 +49,7 @@ export const signupUser = async (
       [{ name, email, password: hashedPassword, role }],
       {
         session,
-      }
+      },
     );
 
     if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
@@ -59,7 +58,7 @@ export const signupUser = async (
 
     const accessToken = generateAccessToken(
       newUser[0]._id.toString(),
-      newUser[0].role
+      newUser[0].role,
     );
 
     const jti = crypto.randomUUID();
@@ -67,7 +66,7 @@ export const signupUser = async (
     const refreshToken = generateRefreshToken(
       newUser[0]._id.toString(),
       newUser[0].role,
-      jti
+      jti,
     );
 
     await redisClient.set(
@@ -81,7 +80,7 @@ export const signupUser = async (
       {
         ex: Number(THIRTY_DAYS), // 30 days
         nx: true, // Only set if not exists
-      }
+      },
     );
 
     await session.commitTransaction();
@@ -101,7 +100,7 @@ export const signupUser = async (
 
 export const siginInUser = async (
   email: string,
-  password: string
+  password: string,
 ): Promise<{
   accessToken: string;
   refreshToken: string;
@@ -118,7 +117,7 @@ export const siginInUser = async (
 
     const isPasswordCorrect = await comparePassword(
       password,
-      foundUser.password
+      foundUser.password,
     );
 
     if (!isPasswordCorrect) {
@@ -131,7 +130,7 @@ export const siginInUser = async (
 
     const accessToken = generateAccessToken(
       foundUser._id.toString(),
-      foundUser.role
+      foundUser.role,
     );
 
     const jti = crypto.randomUUID();
@@ -139,7 +138,7 @@ export const siginInUser = async (
     const refreshToken = generateRefreshToken(
       foundUser._id.toString(),
       foundUser.role,
-      jti
+      jti,
     );
 
     await redisClient.set(
@@ -153,7 +152,7 @@ export const siginInUser = async (
       {
         ex: Number(THIRTY_DAYS), // 30 days
         nx: true, // Only set if not exists
-      }
+      },
     );
 
     return {

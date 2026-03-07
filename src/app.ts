@@ -1,5 +1,3 @@
-// Testing on nano
-
 import express from "express";
 import { PORT } from "./config/env";
 import userRouter from "./routes/user.routes";

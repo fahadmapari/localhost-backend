@@ -17,7 +17,7 @@ export const signup: ExpressController = async (req, res, next) => {
       name,
       email,
       password,
-      role
+      role,
     );
 
     res
@@ -57,7 +57,7 @@ export const signIn: ExpressController = async (req, res, next) => {
 
     const { accessToken, refreshToken, user } = await siginInUser(
       email,
-      password
+      password,
     );
 
     res
@@ -144,7 +144,7 @@ export const verifyToken: ExpressController = async (req, res, next) => {
 
 export const logout: ExpressController = async (req, res, next) => {
   try {
-    const refreshToken = req.cookies.refreshAccessToken || req.body.token;
+    const refreshToken = req.cookies.refreshToken || req.body.token;
 
     if (!refreshToken) {
       res.clearCookie("accessToken").clearCookie("refreshToken");

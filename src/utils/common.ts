@@ -43,7 +43,7 @@ export async function hashPassword(password: string) {
 
 export async function comparePassword(
   password: string,
-  hashedPassword: string
+  hashedPassword: string,
 ) {
   return await bcrypt.compare(password, hashedPassword);
 }
@@ -51,7 +51,7 @@ export async function comparePassword(
 export function generateRefreshToken(
   userId: string,
   role: string,
-  jti: string
+  jti: string,
 ) {
   return jwt.sign(
     {
@@ -62,7 +62,7 @@ export function generateRefreshToken(
     JWT_REFRESH_SECRET!,
     {
       expiresIn: JWT_REFRESH_EXP_IN as ms.StringValue,
-    }
+    },
   );
 }
 
@@ -75,15 +75,15 @@ export const generateAccessToken = (userId: string, role: string) => {
     JWT_SECRET!,
     {
       expiresIn: JWT_EXP_IN as ms.StringValue,
-    }
+    },
   );
 };
 
-export const verifyToken = async (token: string) => {
+export const verifyToken = (token: string) => {
   return jwt.verify(token, JWT_SECRET!);
 };
 
-export const verifyRefreshToken = async (token: string) => {
+export const verifyRefreshToken = (token: string) => {
   return jwt.verify(token, JWT_REFRESH_SECRET!);
 };
 
