@@ -71,6 +71,10 @@ export interface EditedProduct {
   };
   cancellationTerms: string[];
   realease: string;
+  firstRoundReview: boolean;
+  firstRoundReviewRemarks: string[];
+  secondRoundReview: boolean;
+  secondRoundReviewRemarks: string[];
   isB2B: boolean;
   isB2C: boolean;
   overridePriceFromContract: boolean;

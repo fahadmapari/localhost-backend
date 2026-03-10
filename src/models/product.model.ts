@@ -243,6 +243,26 @@ const productVariantSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    firstRoundReview: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    firstRoundReviewRemarks: {
+      type: [String],
+      required: true,
+      default: [],
+    },
+    secondRoundReview: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    secondRoundReviewRemarks: {
+      type: [String],
+      required: true,
+      default: [],
+    },
     priceModel: {
       type: String,
       required: true,

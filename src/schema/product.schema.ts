@@ -169,6 +169,18 @@ export const productZodSchema = z.object({
     z.array(z.string()).min(1, "At least one cancellation term is required.")
   ),
   realease: z.string().min(1, "Realease is required."),
+  firstRoundReview: z.union([
+    z.literal("true").transform(() => true),
+    z.literal("false").transform(() => false),
+    z.boolean(),
+  ]),
+  firstRoundReviewRemarks: preprocessToArray(z.array(z.string())),
+  secondRoundReview: z.union([
+    z.literal("true").transform(() => true),
+    z.literal("false").transform(() => false),
+    z.boolean(),
+  ]),
+  secondRoundReviewRemarks: preprocessToArray(z.array(z.string())),
   isB2B: z.union([
     z.literal("true").transform(() => true),
     z.literal("false").transform(() => false),
@@ -282,6 +294,18 @@ export const editProductZodSchema = z.object({
     z.array(z.string()).min(1, "At least one cancellation term is required.")
   ),
   realease: z.string().min(1, "Realease is required."),
+  firstRoundReview: z.union([
+    z.literal("true").transform(() => true),
+    z.literal("false").transform(() => false),
+    z.boolean(),
+  ]),
+  firstRoundReviewRemarks: preprocessToArray(z.array(z.string())),
+  secondRoundReview: z.union([
+    z.literal("true").transform(() => true),
+    z.literal("false").transform(() => false),
+    z.boolean(),
+  ]),
+  secondRoundReviewRemarks: preprocessToArray(z.array(z.string())),
   isB2B: z.union([
     z.literal("true").transform(() => true),
     z.literal("false").transform(() => false),
