@@ -20,6 +20,7 @@ import { initializeSockets, periodicRoomCleanup } from "./config/sockets";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { getNodeRedisClient } from "./config/redis";
 import bookingRouter from "./routes/booking.routes";
+import aiRouter from "./routes/ai.routes";
 
 const app = express();
 const serverForSocket = createServer(app);
@@ -77,6 +78,7 @@ app.use("/api/v1/clients", clientRouter);
 app.use("/api/v1/admins", adminRouter);
 app.use("/api/v1/conversations", conversationRouter);
 app.use("/api/v1/bookings", bookingRouter);
+app.use("/api/v1/ai", aiRouter);
 
 app.use(globalErrorMiddleware);
 
