@@ -5,7 +5,7 @@ export const rewriteText = async (text: string) => {
   try {
     const res = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: `Rewrite the text and give me the rewritten text in response  : ${text}`,
+      contents: `Rewrite this tour description and give me the rewritten text only in response (No multiple options, No other text): "${text}"`,
     });
 
     if (!res.text) {
