@@ -76,7 +76,7 @@ jobs:
           REQUIRED_SECRETS=(
             "EC2_HOST" "EC2_USER" "EC2_SSH_KEY"
             "DB_URI" "JWT_SECRET" "AWS_ACCESS_KEY_ID"
-            "AWS_SECRET_ACCESS_KEY" "REDIS_URL"
+            "AWS_SECRET_ACCESS_KEY" "REDIS_URL" "PINECONE_KEY"
           )
 
           MISSING_SECRETS=()
@@ -91,6 +91,7 @@ jobs:
               AWS_ACCESS_KEY_ID) [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] && MISSING_SECRETS+=($secret) ;;
               AWS_SECRET_ACCESS_KEY) [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ] && MISSING_SECRETS+=($secret) ;;
               REDIS_URL) [ -z "${{ secrets.REDIS_URL }}" ] && MISSING_SECRETS+=($secret) ;;
+              PINECONE_KEY) [ -z "${{ secrets.PINECONE_KEY }}" ] && MISSING_SECRETS+=($secret) ;;
             esac
           done
 
@@ -134,6 +135,7 @@ jobs:
           S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
           OPEN_AI_KEY=${{ secrets.OPEN_AI_KEY }}
           GEMINI_KEY=${{ secrets.GEMINI_KEY }}
+          PINECONE_KEY=${{ secrets.PINECONE_KEY }}
           THIRTY_DAYS=${{ secrets.THIRTY_DAYS || '30' }}
           EOF
 

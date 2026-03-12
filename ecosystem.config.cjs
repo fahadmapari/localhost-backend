@@ -27,6 +27,7 @@ module.exports = {
         S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
         OPEN_AI_KEY: process.env.OPEN_AI_KEY,
         GEMINI_KEY: process.env.GEMINI_KEY,
+        PINECONE_KEY: process.env.PINECONE_KEY,
         THIRTY_DAYS: process.env.THIRTY_DAYS,
       },
       env_production: {
@@ -48,6 +49,7 @@ module.exports = {
         S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
         OPEN_AI_KEY: process.env.OPEN_AI_KEY,
         GEMINI_KEY: process.env.GEMINI_KEY,
+        PINECONE_KEY: process.env.PINECONE_KEY,
         THIRTY_DAYS: process.env.THIRTY_DAYS,
       },
     },
