@@ -1,19 +1,7 @@
 import mongoose from "mongoose";
-import { ai } from "../config/ai";
-import { pc } from "../config/pinecone";
 import { connectDB } from "../db/mongoDB";
 import { ProductVariant } from "../models/product.model";
-
-function buildEmbeddingContent(product: any) {
-  return `
-      title: ${product.title}, 
-      description: ${product.description}, 
-      Instant Languages: ${product.tourGuideLanguageInstant?.join(", ")},
-      On Request Languages: ${product.tourGuideLanguageOnRequest?.join(", ")},
-      tour duration: ${product.availability.duration.value + product.availability.duration.unit},
-      Meeting point for tour: ${product.meetingPoint.text}
-      `;
-}
+import { syncProductEmbedding } from "../services/product-embedding.service";
 
 async function seedPineconeEmbeddings() {
   await connectDB();
@@ -32,64 +20,16 @@ async function seedPineconeEmbeddings() {
         continue;
       }
 
-      uniqueProducts.set(baseProduct._id.toString(), {
-        id: baseProduct._id.toString(),
-        title: baseProduct.title,
-        description: variant.description,
-        tourGuideLanguageInstant: baseProduct.tourGuideLanguageInstant ?? [],
-        tourGuideLanguageOnRequest: baseProduct.tourGuideLanguageOnRequest ?? [],
-        availability: variant.availability,
-        meetingPoint: variant.meetingPoint,
-        b2bRateInstant: variant.b2bRateInstant,
-        b2cRateInstant: variant.b2cRateInstant,
-        b2bRateOnRequest: variant.b2bRateOnRequest,
-        b2cRateOnRequest: variant.b2cRateOnRequest,
-      });
+      uniqueProducts.set(baseProduct._id.toString(), baseProduct._id.toString());
     }
-
-    const index = pc.index({
-      name: "tours",
-    });
 
     let processed = 0;
 
-    for (const product of uniqueProducts.values()) {
-      const embeddedProduct = await ai.models.embedContent({
-        model: "gemini-embedding-001",
-        contents: buildEmbeddingContent(product),
-        config: {
-          outputDimensionality: 768,
-        },
-      });
-
-      const embeddingValues = embeddedProduct.embeddings?.[0]?.values;
-
-      if (!embeddingValues || embeddingValues.length === 0) {
-        console.log(`Skipping ${product.id}: no embeddings returned`);
-        continue;
-      }
-
-      await index.upsert({
-        records: [
-          {
-            id: product.id,
-            values: embeddingValues,
-            metadata: {
-              title: product.title,
-              city: product.meetingPoint.city,
-              country: product.meetingPoint.country,
-              duration: product.availability.duration.value,
-              b2bPriceInstant: product.b2bRateInstant,
-              b2cPriceInstant: product.b2cRateInstant,
-              b2bPriceOnRequest: product.b2bRateOnRequest,
-              b2cPriceOnRequest: product.b2cRateOnRequest,
-            },
-          },
-        ],
-      });
+    for (const baseProductId of uniqueProducts.values()) {
+      await syncProductEmbedding(baseProductId);
 
       processed += 1;
-      console.log(`Upserted embedding for product ${product.id}`);
+      console.log(`Upserted embedding for product ${baseProductId}`);
     }
 
     console.log(`Completed Pinecone seed. Total upserted: ${processed}`);

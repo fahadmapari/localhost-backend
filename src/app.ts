@@ -21,6 +21,7 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import { getNodeRedisClient } from "./config/redis";
 import bookingRouter from "./routes/booking.routes";
 import aiRouter from "./routes/ai.routes";
+import { startProductEmbeddingWorker } from "./jobs/product-embedding.job";
 
 const app = express();
 const serverForSocket = createServer(app);
@@ -97,6 +98,7 @@ async function startServer() {
   setInterval(() => periodicRoomCleanup(io), 30 * 60 * 1000);
 
   await connectDB();
+  startProductEmbeddingWorker();
 
   serverForSocket.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

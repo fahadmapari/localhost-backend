@@ -13,8 +13,7 @@ import { PRODUCT_CODE_KEY_PREFIX } from "../config/constants";
 import { EditedProduct } from "../types/product.types";
 import _ from "lodash";
 import { createError } from "../utils/errorHandlers";
-import { ai } from "../config/ai";
-import { pc } from "../config/pinecone";
+import { enqueueProductEmbeddingJob } from "../jobs/product-embedding.job";
 
 export const updateProductById = async (
   id: string,
@@ -216,18 +215,24 @@ export const getAllProducts = async (
 export const addNewProduct = async (product: ProductType, images: string[]) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  let createdProduct: Awaited<ReturnType<typeof Product.create>>[number] | null =
+    null;
+  let createdProducts: Awaited<ReturnType<typeof Product.create>> | null = null;
+
   try {
-    const newProduct = await Product.create([{ ...product, images }], {
+    createdProducts = await Product.create([{ ...product, images }], {
       session: session,
     });
+    createdProduct = createdProducts[0];
+    const baseProductId = createdProduct._id;
 
-    const productTitle = slug(newProduct[0].title);
+    const productTitle = slug(createdProduct.title);
 
     const instantProducts = product.tourGuideLanguageInstant?.map((p) => {
       const productCode = PRODUCT_CODE_KEY_PREFIX + nanoid(6);
       return {
         ...product,
-        baseProduct: newProduct[0]._id,
+        baseProduct: baseProductId,
         bookingType: "instant",
         tourGuideLanguage: p,
         url: productTitle + "-" + productCode.toUpperCase(),
@@ -239,7 +244,7 @@ export const addNewProduct = async (product: ProductType, images: string[]) => {
       const productCode = PRODUCT_CODE_KEY_PREFIX + nanoid(6);
       return {
         ...product,
-        baseProduct: newProduct[0]._id,
+        baseProduct: baseProductId,
         bookingType: "request",
         tourGuideLanguage: p,
         url: productTitle + "-" + productCode.toUpperCase(),
@@ -253,54 +258,25 @@ export const addNewProduct = async (product: ProductType, images: string[]) => {
       session: session,
     });
 
-    const embeddedProduct = await ai.models.embedContent({
-      model: "gemini-embedding-001",
-      contents: `
-      title: ${product.title}, 
-      description: ${product.description}, 
-      Instant Languages: ${product.tourGuideLanguageInstant?.join(", ")},
-      On Request Languages: ${product.tourGuideLanguageOnRequest?.join(", ")},
-      tour duration: ${product.availability.duration.value + product.availability.duration.unit},
-      Meeting point for tour: ${product.meetingPoint.text}
-      `,
-      config: {
-        outputDimensionality: 768,
-      },
-    });
+    await session.commitTransaction();
 
-    const embeddingValues = embeddedProduct.embeddings?.[0]?.values;
+    if (!createdProduct || !createdProducts) {
+      throw new Error("Product creation failed.");
+    }
 
-    if (embeddingValues && embeddingValues.length > 0) {
-      const index = pc.index({
-        name: "tours",
-      });
-
-      await index.upsert({
-        records: [
-          {
-            id: newProduct[0]._id.toString(),
-            values: embeddingValues,
-            metadata: {
-              title: newProduct[0].title,
-              city: product.meetingPoint.city,
-              country: product.meetingPoint.country,
-              duration: product.availability.duration.value,
-              b2bPriceInstant: product.b2bRateInstant,
-              b2cPriceInstant: product.b2cRateInstant,
-              b2bPriceOnRequest: product.b2bRateOnRequest,
-              b2cPriceOnRequest: product.b2cRateOnRequest,
-            },
-          },
-        ],
+    try {
+      await enqueueProductEmbeddingJob(createdProduct._id.toString());
+    } catch (error) {
+      console.error("Failed to enqueue product embedding job", error);
+      await Product.findByIdAndUpdate(createdProduct._id, {
+        embeddingStatus: "failed",
+        embeddingLastError: "Failed to enqueue embedding job.",
       });
     }
 
-    session.commitTransaction();
-    session.endSession;
-
-    return newProduct;
+    return createdProducts;
   } catch (error) {
-    session.abortTransaction();
+    await session.abortTransaction();
     await deleteMultipleImages(images);
     throw error;
   } finally {

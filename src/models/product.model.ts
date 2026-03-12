@@ -100,6 +100,17 @@ const productSchema = new mongoose.Schema(
       type: [String],
       required: true,
     },
+    embeddingStatus: {
+      type: String,
+      required: true,
+      enum: ["pending", "processing", "completed", "failed"],
+      default: "pending",
+    },
+    embeddingLastError: {
+      type: String,
+      required: false,
+      default: null,
+    },
   },
   {
     timestamps: true,
