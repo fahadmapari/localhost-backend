@@ -22,4 +22,5 @@ export const {
   S3_BUCKET_NAME,
   THIRTY_DAYS,
   GEMINI_KEY,
+  PINECONE_KEY,
 } = process.env as Record<string, string>;

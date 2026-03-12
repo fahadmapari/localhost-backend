@@ -13,11 +13,13 @@ import { PRODUCT_CODE_KEY_PREFIX } from "../config/constants";
 import { EditedProduct } from "../types/product.types";
 import _ from "lodash";
 import { createError } from "../utils/errorHandlers";
+import { ai } from "../config/ai";
+import { pc } from "../config/pinecone";
 
 export const updateProductById = async (
   id: string,
   editedProduct: EditedProduct,
-  files: Express.Multer.File[]
+  files: Express.Multer.File[],
 ) => {
   try {
     const oldBaseProduct = await Product.findById(editedProduct.baseProductId);
@@ -28,11 +30,11 @@ export const updateProductById = async (
       if (
         (editedProduct.bookingType === "instant" &&
           oldBaseProduct?.tourGuideLanguageInstant?.includes(
-            editedProduct.tourGuideLanguage
+            editedProduct.tourGuideLanguage,
           )) ||
         (editedProduct.bookingType === "request" &&
           oldBaseProduct?.tourGuideLanguageOnRequest?.includes(
-            editedProduct.tourGuideLanguage
+            editedProduct.tourGuideLanguage,
           ))
       ) {
         throw createError("Product already exists", 400);
@@ -63,7 +65,7 @@ export const updateProductById = async (
       editedProduct?.existingImages && editedProduct?.existingImages.length
         ? _.difference(
             oldBaseProduct?.images,
-            editedProduct?.existingImages || []
+            editedProduct?.existingImages || [],
           )
         : [];
 
@@ -77,7 +79,7 @@ export const updateProductById = async (
     if (files.length > 0) {
       const newUploadedImages = await uploadProductImages(
         files,
-        editedProduct.title
+        editedProduct.title,
       );
       await Product.updateOne(
         { _id: editedProduct.baseProductId },
@@ -85,13 +87,13 @@ export const updateProductById = async (
           $push: {
             images: { $each: newUploadedImages },
           },
-        }
+        },
       );
     }
 
     const updatedProduct = await ProductVariant.findByIdAndUpdate(
       id,
-      editedProduct
+      editedProduct,
     );
 
     return updatedProduct;
@@ -177,7 +179,7 @@ export const getAllProducts = async (
   page: number,
   limit: number,
   bookingType: string,
-  searchTerm: string
+  searchTerm: string,
 ) => {
   try {
     const filters: Record<string, any> = {};
@@ -251,6 +253,48 @@ export const addNewProduct = async (product: ProductType, images: string[]) => {
       session: session,
     });
 
+    const embeddedProduct = await ai.models.embedContent({
+      model: "gemini-embedding-001",
+      contents: `
+      title: ${product.title}, 
+      description: ${product.description}, 
+      Instant Languages: ${product.tourGuideLanguageInstant?.join(", ")},
+      On Request Languages: ${product.tourGuideLanguageOnRequest?.join(", ")},
+      tour duration: ${product.availability.duration.value + product.availability.duration.unit},
+      Meeting point for tour: ${product.meetingPoint.text}
+      `,
+      config: {
+        outputDimensionality: 768,
+      },
+    });
+
+    const embeddingValues = embeddedProduct.embeddings?.[0]?.values;
+
+    if (embeddingValues && embeddingValues.length > 0) {
+      const index = pc.index({
+        name: "tours",
+      });
+
+      await index.upsert({
+        records: [
+          {
+            id: newProduct[0]._id.toString(),
+            values: embeddingValues,
+            metadata: {
+              title: newProduct[0].title,
+              city: product.meetingPoint.city,
+              country: product.meetingPoint.country,
+              duration: product.availability.duration.value,
+              b2bPriceInstant: product.b2bRateInstant,
+              b2cPriceInstant: product.b2cRateInstant,
+              b2bPriceOnRequest: product.b2bRateOnRequest,
+              b2cPriceOnRequest: product.b2cRateOnRequest,
+            },
+          },
+        ],
+      });
+    }
+
     session.commitTransaction();
     session.endSession;
 
@@ -282,14 +326,14 @@ export const deleteMultipleImages = async (images: string[]) => {
 
 export const uploadProductImages = async (
   files: Express.Multer.File[],
-  title: string
+  title: string,
 ) => {
   try {
     const uploadedImages: string[] = [];
 
     for (const file of files) {
       const key = `products/product-${randomUUID()}-${title}-${path.extname(
-        file.originalname
+        file.originalname,
       )}`;
 
       const command = new PutObjectCommand({
