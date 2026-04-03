@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { ExpressController } from "../types/controller.types";
 import { sendResponse } from "../utils/controller";
-import { rewriteText } from "../services/ai.service";
+import { productQueryService, rewriteText } from "../services/ai.service";
 
 export const rewriteController: ExpressController = async (req, res, next) => {
   try {
@@ -23,6 +23,37 @@ export const rewriteController: ExpressController = async (req, res, next) => {
       success: true,
       data: {
         rewrittenText,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const askProductController: ExpressController = async (
+  req,
+  res,
+  next,
+) => {
+  try {
+    const { query } = req.body;
+
+    if (!query) {
+      sendResponse(res, {
+        message: "Query is required",
+        statusCode: 400,
+        success: false,
+      });
+    }
+
+    const answer = await productQueryService(query);
+
+    sendResponse(res, {
+      message: "Product query completed successfully",
+      statusCode: 200,
+      success: true,
+      data: {
+        answer,
       },
     });
   } catch (error) {
