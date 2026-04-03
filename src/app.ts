@@ -18,7 +18,7 @@ import { Server } from "socket.io";
 import { createServer } from "node:http";
 import { initializeSockets, periodicRoomCleanup } from "./config/sockets";
 import { createAdapter } from "@socket.io/redis-adapter";
-import { getNodeRedisClient } from "./config/redis";
+import redisClient, { getNodeRedisClient } from "./config/redis";
 import bookingRouter from "./routes/booking.routes";
 import aiRouter from "./routes/ai.routes";
 import { startProductEmbeddingWorker } from "./jobs/product-embedding.job";
@@ -85,6 +85,8 @@ app.use(globalErrorMiddleware);
 
 // server boot
 async function startServer() {
+  await redisClient.connect();
+
   const pubClient = getNodeRedisClient();
   const subClient = pubClient.duplicate();
 

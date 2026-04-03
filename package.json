@@ -17,7 +17,6 @@
     "@pinecone-database/pinecone": "^7.1.0",
     "@redis/client": "^5.8.2",
     "@socket.io/redis-adapter": "^8.3.0",
-    "@upstash/redis": "^1.35.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.71.0",
     "compression": "^1.8.0",

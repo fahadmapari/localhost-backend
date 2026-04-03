@@ -71,15 +71,15 @@ export const signupUser = async (
 
     await redisClient.set(
       `refresh:${jti}`,
-      {
+      JSON.stringify({
         userId: newUser[0]._id.toString(),
         name: newUser[0].name,
         role: newUser[0].role,
         email: newUser[0].email,
-      },
+      }),
       {
-        ex: Number(THIRTY_DAYS), // 30 days
-        nx: true, // Only set if not exists
+        EX: Number(THIRTY_DAYS), // 30 days
+        NX: true, // Only set if not exists
       },
     );
 
@@ -143,15 +143,15 @@ export const siginInUser = async (
 
     await redisClient.set(
       `refresh:${jti}`,
-      {
+      JSON.stringify({
         userId: foundUser._id.toString(),
         name: foundUser.name,
         role: foundUser.role,
         email: foundUser.email,
-      },
+      }),
       {
-        ex: Number(THIRTY_DAYS), // 30 days
-        nx: true, // Only set if not exists
+        EX: Number(THIRTY_DAYS), // 30 days
+        NX: true, // Only set if not exists
       },
     );
 
@@ -174,12 +174,15 @@ export const refreshAccessToken = async (refreshToken: string) => {
   try {
     const decoded: any = jwt.verify(refreshToken, JWT_REFRESH_SECRET!);
 
-    const exists = (await redisClient.get(`refresh:${decoded?.jti}`)) as {
-      userId: string;
-      name: string;
-      role: string;
-      email: string;
-    };
+    const raw = await redisClient.get(`refresh:${decoded?.jti}`);
+    const exists = raw
+      ? (JSON.parse(raw) as {
+          userId: string;
+          name: string;
+          role: string;
+          email: string;
+        })
+      : null;
 
     if (!exists || exists.userId !== decoded.userId) {
       throw createError("Invalid token", 401);

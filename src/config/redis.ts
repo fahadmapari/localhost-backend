@@ -1,10 +1,8 @@
-import { Redis as HTTPRedis } from "@upstash/redis";
-import { REDIS_TCP, REDIS_TOKEN, REDIS_URL } from "./env";
 import { createClient } from "@redis/client";
+import { REDIS_TCP } from "./env";
 
-const redisClient = new HTTPRedis({
-  url: REDIS_URL,
-  token: REDIS_TOKEN,
+const redisClient = createClient({
+  url: REDIS_TCP,
 });
 
 export const getNodeRedisClient = () =>
