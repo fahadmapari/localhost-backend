@@ -91,6 +91,7 @@ async function startServer() {
 
   const pubClient = getNodeRedisClient();
   const subClient = pubClient.duplicate();
+  subClient.on("error", (err) => console.error("[redis:sub]", err));
 
   await Promise.all([pubClient.connect(), subClient.connect()]);
 
