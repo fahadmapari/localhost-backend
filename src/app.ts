@@ -21,6 +21,7 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import redisClient, { getNodeRedisClient } from "./config/redis";
 import bookingRouter from "./routes/booking.routes";
 import aiRouter from "./routes/ai.routes";
+import supplierRouter from "./routes/supplier.routes";
 import { startProductEmbeddingWorker } from "./jobs/product-embedding.job";
 
 const app = express();
@@ -79,6 +80,7 @@ app.use("/api/v1/clients", clientRouter);
 app.use("/api/v1/admins", adminRouter);
 app.use("/api/v1/conversations", conversationRouter);
 app.use("/api/v1/bookings", bookingRouter);
+app.use("/api/v1/suppliers", supplierRouter);
 app.use("/api/v1/ai", aiRouter);
 
 app.use(globalErrorMiddleware);

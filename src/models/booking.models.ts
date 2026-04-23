@@ -1,5 +1,64 @@
 import mongoose from "mongoose";
 
+const itineraryFileSchema = new mongoose.Schema(
+  {
+    key: { type: String, required: true },
+    filename: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    size: { type: Number, required: true },
+    uploadedAt: { type: Date, default: Date.now },
+    uploadedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  { _id: false }
+);
+
+const guideAssignmentSchema = new mongoose.Schema(
+  {
+    supplierId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Supplier",
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ["invited", "confirmed", "declined", "completed"],
+      default: "invited",
+    },
+    notes: { type: String },
+    assignedAt: { type: Date, default: Date.now },
+    respondedAt: { type: Date },
+    assignedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  { _id: true, timestamps: false }
+);
+
+const orderItemOperationsSchema = new mongoose.Schema(
+  {
+    internalComment: { type: String },
+    accountingComment: { type: String },
+    transportDetails: { type: String },
+    supplierRemark: { type: String },
+    finalDetailsToProvider: { type: Boolean, default: false },
+    finalDetailsByEmail: { type: Boolean, default: false },
+    finalDetailsToClient: { type: Boolean, default: false },
+    controlCallPicId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    picId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  },
+  { _id: false }
+);
+
 const orderItemSchema = new mongoose.Schema(
   {
     productId: {
@@ -46,6 +105,18 @@ const orderItemSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+    operations: {
+      type: orderItemOperationsSchema,
+      default: () => ({}),
+    },
+    guideItinerary: {
+      type: itineraryFileSchema,
+      default: null,
+    },
+    guideAssignments: {
+      type: [guideAssignmentSchema],
+      default: [],
+    },
   },
   {
     _id: false,
@@ -54,6 +125,12 @@ const orderItemSchema = new mongoose.Schema(
 
 const bookingSchema = new mongoose.Schema(
   {
+    bookingRef: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
     clientId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Client",
@@ -116,6 +193,10 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       enum: ["unpaid", "paid", "partiallyPaid"],
       default: "unpaid",
+    },
+    clientItinerary: {
+      type: itineraryFileSchema,
+      default: null,
     },
   },
   { timestamps: true }

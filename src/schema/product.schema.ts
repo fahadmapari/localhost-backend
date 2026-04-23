@@ -2,6 +2,12 @@ import { z } from "zod";
 import languages from "../assets/json/languages.v1.json" with { type: "json" };
 import { timeToMinutes } from "../utils/common";
 
+export const productRemarkSchema = z.object({
+  text: z.string().trim().min(1, "Remark is required").max(2000),
+});
+
+export type ProductRemarkInput = z.infer<typeof productRemarkSchema>;
+
 function preprocessToArray<T extends z.ZodArray<z.ZodTypeAny>>(arraySchema: T) {
   return z.preprocess(
     (arg) => {

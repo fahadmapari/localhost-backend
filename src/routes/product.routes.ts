@@ -7,6 +7,11 @@ import {
   getProducts,
   searchProductController,
 } from "../controllers/product.controller";
+import {
+  createProductRemarkController,
+  deleteProductRemarkController,
+  listProductRemarksController,
+} from "../controllers/product-remark.controller";
 import { upload } from "../config/multer";
 import {
   authorizationMiddleware,
@@ -59,6 +64,27 @@ productRouter.post(
   authorizationMiddleware,
   isAdminMiddleware,
   searchProductController
+);
+
+productRouter.get(
+  "/:id/remarks",
+  authorizationMiddleware,
+  isAdminMiddleware,
+  listProductRemarksController
+);
+
+productRouter.post(
+  "/:id/remarks",
+  authorizationMiddleware,
+  isAdminMiddleware,
+  createProductRemarkController
+);
+
+productRouter.delete(
+  "/remarks/:remarkId",
+  authorizationMiddleware,
+  isAdminMiddleware,
+  deleteProductRemarkController
 );
 
 export default productRouter;

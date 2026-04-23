@@ -32,3 +32,45 @@ export const bookingZodSchema = z.object({
 });
 
 export type BookingInput = z.infer<typeof bookingZodSchema>;
+
+const objectIdLikeSchema = z
+  .string()
+  .min(1)
+  .regex(/^[0-9a-fA-F]{24}$/, "Invalid id");
+
+export const orderItemOperationsSchema = z
+  .object({
+    internalComment: z.string().optional(),
+    accountingComment: z.string().optional(),
+    transportDetails: z.string().optional(),
+    supplierRemark: z.string().optional(),
+    finalDetailsToProvider: z.boolean().optional(),
+    finalDetailsByEmail: z.boolean().optional(),
+    finalDetailsToClient: z.boolean().optional(),
+    controlCallPicId: objectIdLikeSchema.nullable().optional(),
+    picId: objectIdLikeSchema.nullable().optional(),
+  })
+  .strict();
+
+export type OrderItemOperationsInput = z.infer<
+  typeof orderItemOperationsSchema
+>;
+
+export const assignGuideSchema = z.object({
+  supplierId: objectIdLikeSchema,
+  notes: z.string().optional(),
+});
+
+export const updateGuideAssignmentSchema = z
+  .object({
+    status: z
+      .enum(["invited", "confirmed", "declined", "completed"])
+      .optional(),
+    notes: z.string().optional(),
+  })
+  .strict();
+
+export type AssignGuideInput = z.infer<typeof assignGuideSchema>;
+export type UpdateGuideAssignmentInput = z.infer<
+  typeof updateGuideAssignmentSchema
+>;
