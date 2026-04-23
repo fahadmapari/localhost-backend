@@ -133,7 +133,7 @@ const bookingSchema = new mongoose.Schema(
     },
     clientId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Client",
+      ref: "Profile",
       required: true,
     },
     leadFirstName: {

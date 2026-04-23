@@ -7,7 +7,8 @@
     "build": "tsc && tsc-alias",
     "start": "node dist/app.js",
     "dev": "tsx watch src/app.ts",
-    "seed:pinecone:temp": "tsx src/scripts/temp-seed-pinecone.ts"
+    "seed:pinecone:temp": "tsx src/scripts/temp-seed-pinecone.ts",
+    "seed:bookings:temp": "tsx src/scripts/temp-seed-bookings.ts"
   },
   "dependencies": {
     "@arcjet/inspect": "^1.0.0-beta.8",
