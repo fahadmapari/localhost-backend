@@ -146,7 +146,13 @@ jobs:
           # Execute deployment on remote server
           ssh -i ~/.ssh/deploy_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'REMOTE_SCRIPT'
             set -euo pipefail  # Exit on error, undefined vars, pipe failures
-            
+
+            # Load nvm so npm/node are available in non-interactive SSH sessions
+            export NVM_DIR="$HOME/.nvm"
+            if [ -s "$NVM_DIR/nvm.sh" ]; then
+              . "$NVM_DIR/nvm.sh"
+            fi
+
             echo "📦 Preparing deployment directory..."
             APP_DIR="/home/ubuntu/localhost-backend"
             BACKUP_DIR="/home/ubuntu/backups/$(date +%Y%m%d_%H%M%S)"
@@ -177,10 +183,6 @@ jobs:
             echo "⚙️ Updating configuration..."
             # Move env file created on runner
             mv /tmp/.env.production ./.env.production
-
-            if [ -s "$HOME/.nvm/nvm.sh" ]; then
-              . "$HOME/.nvm/nvm.sh"
-            fi
 
             echo "Ensuring Node version..."
             if [ -n "$NODE_VERSION" ] && command -v nvm >/dev/null 2>&1; then
