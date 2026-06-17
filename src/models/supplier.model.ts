@@ -1,5 +1,47 @@
 import mongoose, { InferSchemaType } from "mongoose";
 
+const TITLE_ENUM = ["Mr", "Mrs", "Ms", "Dr"] as const;
+
+const AVAILABILITY_TIME_ENUM = [
+  "Full Day",
+  "Weekend only (Including Sunday)",
+  "Morning Hours",
+  "Afternoon Hours",
+  "Evening Hours",
+] as const;
+
+const SERVICE_TYPE_ENUM = [
+  "Guide",
+  "Assistant",
+  "Driver-Guide",
+  "Interpreter",
+  "Tour Escort",
+] as const;
+
+const GUIDING_LEVEL_ENUM = [
+  "Beginner",
+  "Intermediate",
+  "Advanced",
+  "Expert",
+] as const;
+
+const LANGUAGE_LEVEL_ENUM = [
+  "A1",
+  "A2",
+  "B1",
+  "B2",
+  "C1",
+  "C2",
+  "Native",
+] as const;
+
+const CANCELLATION_AMENDMENT_UNIT_ENUM = ["Hours", "Days"] as const;
+const AMENDMENT_RATE_TYPE_ENUM = ["Fixed", "Percent"] as const;
+
+export const STANDARD_RATE_TIER_HOURS = [
+  0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+] as const;
+
 const phoneSchema = new mongoose.Schema(
   {
     code: { type: String },
@@ -8,9 +50,98 @@ const phoneSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const addressSchema = new mongoose.Schema(
+  {
+    streetAndNumber: { type: String, required: true },
+    city: { type: String, required: true },
+    municipality: String,
+    district: String,
+    state: String,
+    country: { type: String, required: true, default: "Germany" },
+    postalCode: { type: String, required: true },
+    isPrimary: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+const guidingLocationEntrySchema = new mongoose.Schema(
+  {
+    location: { type: String, required: true, trim: true },
+    guidingLevel: { type: String, enum: GUIDING_LEVEL_ENUM },
+    attraction: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
+const guidingLanguageEntrySchema = new mongoose.Schema(
+  {
+    language: { type: String, required: true, trim: true },
+    languageLevel: { type: String, enum: LANGUAGE_LEVEL_ENUM },
+  },
+  { _id: false }
+);
+
+const rateTierSchema = new mongoose.Schema(
+  {
+    hours: { type: Number, required: true },
+    rate: { type: Number, min: 0 },
+  },
+  { _id: false }
+);
+
+const cancellationTermSchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      enum: CANCELLATION_AMENDMENT_UNIT_ENUM,
+      required: true,
+    },
+    value: { type: Number, min: 0, required: true },
+    percentage: { type: Number, min: 0, max: 100 },
+  },
+  { _id: false }
+);
+
+const amendmentSchema = new mongoose.Schema(
+  {
+    durationType: {
+      type: String,
+      enum: CANCELLATION_AMENDMENT_UNIT_ENUM,
+      required: true,
+    },
+    value: { type: Number, min: 0, required: true },
+    rateType: {
+      type: String,
+      enum: AMENDMENT_RATE_TYPE_ENUM,
+      required: true,
+    },
+    rateValue: { type: Number, min: 0 },
+    weekendsIncluded: { type: Boolean, default: false },
+    publicHolidayIncluded: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+const locationSupplementEntrySchema = new mongoose.Schema(
+  {
+    guidingLocation: { type: String, required: true, trim: true },
+    locationSupplement: { type: Number, min: 0, default: 0 },
+  },
+  { _id: false }
+);
+
+const languageSupplementEntrySchema = new mongoose.Schema(
+  {
+    guidingLanguage: { type: String, required: true, trim: true },
+    languageSupplement: { type: Number, min: 0, default: 0 },
+  },
+  { _id: false }
+);
+
 const supplierSchema = new mongoose.Schema(
   {
     personalInfo: {
+      title: { type: String, enum: TITLE_ENUM },
       firstName: { type: String, required: true, trim: true },
       lastName: { type: String, required: true, trim: true },
       gender: {
@@ -27,8 +158,9 @@ const supplierSchema = new mongoose.Schema(
       birthPlace: { type: String, required: true },
       remunerationExpectation: { type: Number, min: 0 },
       availabilityTime: {
-        type: String,
-        enum: ["Full Time", "Part Time", "Weekends Only", "Flexible"],
+        type: [String],
+        enum: AVAILABILITY_TIME_ENUM,
+        default: [],
       },
       howDidYouHearAboutUs: {
         type: String,
@@ -41,15 +173,11 @@ const supplierSchema = new mongoose.Schema(
         ],
       },
       typeOfServicesProvided: {
-        type: String,
-        enum: [
-          "City Tours",
-          "Museum Tours",
-          "Adventure Tours",
-          "Cultural Tours",
-          "Multiple",
-        ],
+        type: [String],
+        enum: SERVICE_TYPE_ENUM,
+        default: [],
       },
+      transportationDetail: String,
       hobbies: [String],
       memberOfAssociation: {
         type: String,
@@ -58,16 +186,7 @@ const supplierSchema = new mongoose.Schema(
       associationName: String,
     },
 
-    address: {
-      streetAndNumber: { type: String, required: true },
-      city: { type: String, required: true },
-      municipality: String,
-      district: String,
-      state: String,
-      country: { type: String, required: true, default: "Germany" },
-      postalCode: { type: String, required: true },
-      isPrimary: { type: Boolean, default: false },
-    },
+    addresses: { type: [addressSchema], default: [] },
 
     contact: {
       preferredFormOfContact: {
@@ -100,7 +219,7 @@ const supplierSchema = new mongoose.Schema(
       homePhone: phoneSchema,
       otherPhone: phoneSchema,
       fax: phoneSchema,
-      whatsapp: String,
+      whatsapp: phoneSchema,
       skype: String,
       website: String,
       socialMedia: {
@@ -147,8 +266,8 @@ const supplierSchema = new mongoose.Schema(
           "Nature",
         ],
       },
-      guidingLocation: [String],
-      guidingLanguages: [String],
+      guidingLocation: { type: [guidingLocationEntrySchema], default: [] },
+      guidingLanguages: { type: [guidingLanguageEntrySchema], default: [] },
     },
 
     billing: {
@@ -175,25 +294,24 @@ const supplierSchema = new mongoose.Schema(
       contractEndDate: Date,
       serviceType: {
         type: String,
-        enum: ["Guide", "Assistant"],
+        enum: SERVICE_TYPE_ENUM,
         required: true,
       },
+      rateTiers: { type: [rateTierSchema], default: [] },
     },
 
-    cancellationTerms: {
-      hours: { percentage: Number, days: Number },
-      days1: { percentage: Number, days: Number },
-      days2: { percentage: Number, days: Number },
+    cancellationTerms: { type: [cancellationTermSchema], default: [] },
+
+    amendments: { type: [amendmentSchema], default: [] },
+
+    locationSupplements: {
+      type: [locationSupplementEntrySchema],
+      default: [],
     },
 
-    locationSupplement: {
-      currentLocation: String,
-      locationSupplement: [String],
-    },
-
-    languageSupplement: {
-      currentLanguage: String,
-      languageSupplement: [String],
+    languageSupplements: {
+      type: [languageSupplementEntrySchema],
+      default: [],
     },
 
     docs: {
@@ -223,12 +341,8 @@ const supplierSchema = new mongoose.Schema(
         enum: ["Pre-Service", "Post-Service"],
       },
       callOffTimeInDaysBeforeService: Number,
+      maxPax: { type: Number, min: 0 },
       alsoFax: Boolean,
-    },
-
-    amendments: {
-      canBeAddedByClicking: Boolean,
-      buttonFill: Boolean,
     },
 
     rating: {
@@ -260,8 +374,8 @@ supplierSchema.index({
 });
 supplierSchema.index({ "contact.email": 1 }, { unique: true });
 supplierSchema.index({ status: 1 });
-supplierSchema.index({ "experience.guidingLocation": 1 });
-supplierSchema.index({ "experience.guidingLanguages": 1 });
+supplierSchema.index({ "experience.guidingLocation.location": 1 });
+supplierSchema.index({ "experience.guidingLanguages.language": 1 });
 supplierSchema.index({ createdAt: -1 });
 
 export type SupplierDocument = InferSchemaType<typeof supplierSchema>;

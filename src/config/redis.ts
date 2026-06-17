@@ -1,7 +1,10 @@
 import { createClient } from "@redis/client";
 import { REDIS_TCP } from "./env";
 
-const attachErrorListener = (client: ReturnType<typeof createClient>, label: string) => {
+const attachErrorListener = (
+  client: ReturnType<typeof createClient>,
+  label: string,
+) => {
   client.on("error", (err) => {
     console.error(`[redis:${label}]`, err);
   });

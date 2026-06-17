@@ -5,11 +5,15 @@ import {
 } from "../schema/supplier.schema";
 import {
   createSupplierService,
+  deleteSupplierCvService,
+  deleteSupplierPhotoService,
   deleteSupplierService,
   getAllSuppliersService,
   getSupplierByIdService,
   searchActiveSuppliersService,
   updateSupplierService,
+  uploadSupplierCvService,
+  uploadSupplierPhotoService,
 } from "../services/supplier.service";
 import { sendResponse } from "../utils/controller";
 import { createError } from "../utils/errorHandlers";
@@ -49,11 +53,12 @@ export const getSuppliersController: ExpressController = async (
   next
 ) => {
   try {
-    const { page = 0, limit = 15, status } = req.query;
+    const { page = 0, limit = 15, status, q } = req.query;
     const data = await getAllSuppliersService(
       Number(page),
       Number(limit) < 100 ? Number(limit) : 100,
-      typeof status === "string" ? status : undefined
+      typeof status === "string" ? status : undefined,
+      typeof q === "string" ? q.trim() || undefined : undefined
     );
 
     sendResponse(res, {
@@ -149,6 +154,94 @@ export const searchSuppliersController: ExpressController = async (
       message: "Suppliers fetched successfully",
       statusCode: 200,
       data: suppliers,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadSupplierPhotoController: ExpressController = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    if (!req.user) throw createError("Unauthorized", 401);
+    if (!req.params.id) throw createError("Supplier id is required", 400);
+    if (!req.file) throw createError("Photo file is required", 400);
+
+    const result = await uploadSupplierPhotoService(
+      req.params.id,
+      req.file,
+      req.user.id
+    );
+    sendResponse(res, {
+      message: "Photo uploaded successfully",
+      statusCode: 200,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const uploadSupplierCvController: ExpressController = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    if (!req.user) throw createError("Unauthorized", 401);
+    if (!req.params.id) throw createError("Supplier id is required", 400);
+    if (!req.file) throw createError("CV file is required", 400);
+
+    const result = await uploadSupplierCvService(
+      req.params.id,
+      req.file,
+      req.user.id
+    );
+    sendResponse(res, {
+      message: "CV uploaded successfully",
+      statusCode: 200,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteSupplierPhotoController: ExpressController = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    if (!req.user) throw createError("Unauthorized", 401);
+    if (!req.params.id) throw createError("Supplier id is required", 400);
+
+    await deleteSupplierPhotoService(req.params.id, req.user.id);
+    sendResponse(res, {
+      message: "Photo removed successfully",
+      statusCode: 200,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteSupplierCvController: ExpressController = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    if (!req.user) throw createError("Unauthorized", 401);
+    if (!req.params.id) throw createError("Supplier id is required", 400);
+
+    await deleteSupplierCvService(req.params.id, req.user.id);
+    sendResponse(res, {
+      message: "CV removed successfully",
+      statusCode: 200,
     });
   } catch (error) {
     next(error);

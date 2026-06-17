@@ -1,39 +1,41 @@
 import { z } from "zod";
 
+const TITLE_VALUES = ["Mr", "Mrs", "Ms", "Dr"] as const;
+const AVAILABILITY_TIME_VALUES = [
+  "Full Day",
+  "Weekend only (Including Sunday)",
+  "Morning Hours",
+  "Afternoon Hours",
+  "Evening Hours",
+] as const;
+const SERVICE_TYPE_VALUES = [
+  "Guide",
+  "Assistant",
+  "Driver-Guide",
+  "Interpreter",
+  "Tour Escort",
+] as const;
+const GUIDING_LEVEL_VALUES = [
+  "Beginner",
+  "Intermediate",
+  "Advanced",
+  "Expert",
+] as const;
+const LANGUAGE_LEVEL_VALUES = [
+  "A1",
+  "A2",
+  "B1",
+  "B2",
+  "C1",
+  "C2",
+  "Native",
+] as const;
+const UNIT_VALUES = ["Hours", "Days"] as const;
+const RATE_TYPE_VALUES = ["Fixed", "Percent"] as const;
+
 const phoneSchema = z.object({
   code: z.string().optional(),
   number: z.string().optional(),
-});
-
-const personalInfoSchema = z.object({
-  firstName: z.string().trim().min(1, "First name is required"),
-  lastName: z.string().trim().min(1, "Last name is required"),
-  gender: z.enum(["Male", "Female", "Other"]),
-  dateOfBirth: z.coerce.date(),
-  nationality: z.string().min(1, "Nationality is required"),
-  familyStatus: z
-    .enum(["Single", "Married", "Divorced", "Widowed"])
-    .optional(),
-  birthPlace: z.string().min(1, "Birth place is required"),
-  remunerationExpectation: z.coerce.number().min(0).optional(),
-  availabilityTime: z
-    .enum(["Full Time", "Part Time", "Weekends Only", "Flexible"])
-    .optional(),
-  howDidYouHearAboutUs: z
-    .enum(["Social Media", "Website", "Referral", "Advertisement", "Other"])
-    .optional(),
-  typeOfServicesProvided: z
-    .enum([
-      "City Tours",
-      "Museum Tours",
-      "Adventure Tours",
-      "Cultural Tours",
-      "Multiple",
-    ])
-    .optional(),
-  hobbies: z.array(z.string()).optional(),
-  memberOfAssociation: z.enum(["Yes", "No", "Applied"]).optional(),
-  associationName: z.string().optional(),
 });
 
 const addressSchema = z.object({
@@ -45,6 +47,70 @@ const addressSchema = z.object({
   country: z.string().min(1, "Country is required"),
   postalCode: z.string().min(1, "Postal code is required"),
   isPrimary: z.boolean().optional(),
+});
+
+const guidingLocationEntrySchema = z.object({
+  location: z.string().min(1, "Location is required"),
+  guidingLevel: z.enum(GUIDING_LEVEL_VALUES).optional(),
+  attraction: z.string().optional(),
+});
+
+const guidingLanguageEntrySchema = z.object({
+  language: z.string().min(1, "Language is required"),
+  languageLevel: z.enum(LANGUAGE_LEVEL_VALUES).optional(),
+});
+
+const rateTierSchema = z.object({
+  hours: z.coerce.number().min(0),
+  rate: z.coerce.number().min(0).optional(),
+});
+
+const cancellationTermSchema = z.object({
+  type: z.enum(UNIT_VALUES),
+  value: z.coerce.number().min(0),
+  percentage: z.coerce.number().min(0).max(100).optional(),
+});
+
+const amendmentSchema = z.object({
+  durationType: z.enum(UNIT_VALUES),
+  value: z.coerce.number().min(0),
+  rateType: z.enum(RATE_TYPE_VALUES),
+  rateValue: z.coerce.number().min(0).optional(),
+  weekendsIncluded: z.boolean().optional(),
+  publicHolidayIncluded: z.boolean().optional(),
+});
+
+const locationSupplementEntrySchema = z.object({
+  guidingLocation: z.string().min(1, "Guiding location is required"),
+  locationSupplement: z.coerce.number().min(0).optional(),
+});
+
+const languageSupplementEntrySchema = z.object({
+  guidingLanguage: z.string().min(1, "Guiding language is required"),
+  languageSupplement: z.coerce.number().min(0).optional(),
+});
+
+const personalInfoSchema = z.object({
+  title: z.enum(TITLE_VALUES).optional(),
+  firstName: z.string().trim().min(1, "First name is required"),
+  lastName: z.string().trim().min(1, "Last name is required"),
+  gender: z.enum(["Male", "Female", "Other"]),
+  dateOfBirth: z.coerce.date(),
+  nationality: z.string().min(1, "Nationality is required"),
+  familyStatus: z
+    .enum(["Single", "Married", "Divorced", "Widowed"])
+    .optional(),
+  birthPlace: z.string().min(1, "Birth place is required"),
+  remunerationExpectation: z.coerce.number().min(0).optional(),
+  availabilityTime: z.array(z.enum(AVAILABILITY_TIME_VALUES)).optional(),
+  howDidYouHearAboutUs: z
+    .enum(["Social Media", "Website", "Referral", "Advertisement", "Other"])
+    .optional(),
+  typeOfServicesProvided: z.array(z.enum(SERVICE_TYPE_VALUES)).optional(),
+  transportationDetail: z.string().optional(),
+  hobbies: z.array(z.string()).optional(),
+  memberOfAssociation: z.enum(["Yes", "No", "Applied"]).optional(),
+  associationName: z.string().optional(),
 });
 
 const contactSchema = z.object({
@@ -64,7 +130,7 @@ const contactSchema = z.object({
   homePhone: phoneSchema.optional(),
   otherPhone: phoneSchema.optional(),
   fax: phoneSchema.optional(),
-  whatsapp: z.string().optional(),
+  whatsapp: phoneSchema.optional(),
   skype: z.string().optional(),
   website: z.string().optional(),
   socialMedia: z
@@ -111,8 +177,8 @@ const experienceSchema = z.object({
       "Nature",
     ])
     .optional(),
-  guidingLocation: z.array(z.string()).optional(),
-  guidingLanguages: z.array(z.string()).optional(),
+  guidingLocation: z.array(guidingLocationEntrySchema).optional(),
+  guidingLanguages: z.array(guidingLanguageEntrySchema).optional(),
 });
 
 const billingSchema = z.object({
@@ -136,45 +202,9 @@ const billingSchema = z.object({
 const contractSchema = z.object({
   contractStartDate: z.coerce.date(),
   contractEndDate: z.coerce.date().optional(),
-  serviceType: z.enum(["Guide", "Assistant"]),
+  serviceType: z.enum(SERVICE_TYPE_VALUES),
+  rateTiers: z.array(rateTierSchema).optional(),
 });
-
-const cancellationTermsSchema = z
-  .object({
-    hours: z
-      .object({
-        percentage: z.coerce.number().optional(),
-        days: z.coerce.number().optional(),
-      })
-      .optional(),
-    days1: z
-      .object({
-        percentage: z.coerce.number().optional(),
-        days: z.coerce.number().optional(),
-      })
-      .optional(),
-    days2: z
-      .object({
-        percentage: z.coerce.number().optional(),
-        days: z.coerce.number().optional(),
-      })
-      .optional(),
-  })
-  .optional();
-
-const locationSupplementSchema = z
-  .object({
-    currentLocation: z.string().optional(),
-    locationSupplement: z.array(z.string()).optional(),
-  })
-  .optional();
-
-const languageSupplementSchema = z
-  .object({
-    currentLanguage: z.string().optional(),
-    languageSupplement: z.array(z.string()).optional(),
-  })
-  .optional();
 
 const docsSchema = z
   .object({
@@ -203,30 +233,24 @@ const serviceConfigSchema = z
     publicTransportSupplementRateInEUR: z.coerce.number().optional(),
     paymentAgreement: z.enum(["Pre-Service", "Post-Service"]).optional(),
     callOffTimeInDaysBeforeService: z.coerce.number().optional(),
+    maxPax: z.coerce.number().min(0).optional(),
     alsoFax: z.boolean().optional(),
-  })
-  .optional();
-
-const amendmentsSchema = z
-  .object({
-    canBeAddedByClicking: z.boolean().optional(),
-    buttonFill: z.boolean().optional(),
   })
   .optional();
 
 export const supplierCreateSchema = z.object({
   personalInfo: personalInfoSchema,
-  address: addressSchema,
+  addresses: z.array(addressSchema).min(1, "At least one address is required"),
   contact: contactSchema,
   experience: experienceSchema.optional(),
   billing: billingSchema.optional(),
   contract: contractSchema,
-  cancellationTerms: cancellationTermsSchema,
-  locationSupplement: locationSupplementSchema,
-  languageSupplement: languageSupplementSchema,
+  cancellationTerms: z.array(cancellationTermSchema).optional(),
+  amendments: z.array(amendmentSchema).optional(),
+  locationSupplements: z.array(locationSupplementEntrySchema).optional(),
+  languageSupplements: z.array(languageSupplementEntrySchema).optional(),
   docs: docsSchema,
   serviceConfig: serviceConfigSchema,
-  amendments: amendmentsSchema,
   comments: z.string().optional(),
   autoBookings: z.boolean().optional(),
   employee: z.boolean().optional(),

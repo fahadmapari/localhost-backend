@@ -1,10 +1,51 @@
+import path from "path";
+import { randomUUID } from "crypto";
 import mongoose from "mongoose";
-import Supplier from "../models/supplier.model";
+import { DeleteObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import Supplier, { STANDARD_RATE_TIER_HOURS } from "../models/supplier.model";
+import s3Client from "../config/s3";
+import { S3_BUCKET_NAME } from "../config/env";
 import {
   SupplierCreateInput,
   SupplierUpdateInput,
 } from "../schema/supplier.schema";
 import { createError } from "../utils/errorHandlers";
+
+const seedRateTiers = (
+  tiers: SupplierCreateInput["contract"]["rateTiers"]
+) => {
+  const provided = tiers ?? [];
+  if (provided.length > 0) return provided;
+  return STANDARD_RATE_TIER_HOURS.map((hours) => ({ hours, rate: undefined }));
+};
+
+const uploadSupplierFileToS3 = async (
+  file: Express.Multer.File,
+  supplierId: string,
+  kind: "photo" | "cv"
+): Promise<{ key: string }> => {
+  const ext = path.extname(file.originalname);
+  const key = `suppliers/${supplierId}/${kind}-${randomUUID()}${ext}`;
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: S3_BUCKET_NAME,
+      Key: key,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    })
+  );
+  return { key };
+};
+
+const deleteS3Object = async (key: string) => {
+  try {
+    await s3Client.send(
+      new DeleteObjectCommand({ Bucket: S3_BUCKET_NAME, Key: key })
+    );
+  } catch {
+    // Best-effort deletion.
+  }
+};
 
 export const createSupplierService = async (
   data: SupplierCreateInput,
@@ -23,6 +64,10 @@ export const createSupplierService = async (
 
     const supplier = await Supplier.create({
       ...data,
+      contract: {
+        ...data.contract,
+        rateTiers: seedRateTiers(data.contract.rateTiers),
+      },
       createdBy: new mongoose.Types.ObjectId(createdBy),
     });
 
@@ -35,12 +80,24 @@ export const createSupplierService = async (
 export const getAllSuppliersService = async (
   page: number,
   limit: number,
-  status?: string
+  status?: string,
+  searchTerm?: string
 ) => {
   try {
     const filter: Record<string, unknown> = {};
     if (status && status !== "all") {
       filter.status = status;
+    }
+    if (searchTerm) {
+      const regex = new RegExp(
+        searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+        "i"
+      );
+      filter.$or = [
+        { "personalInfo.firstName": regex },
+        { "personalInfo.lastName": regex },
+        { "contact.email": regex },
+      ];
     }
 
     const [suppliers, total] = await Promise.all([
@@ -108,6 +165,8 @@ export const deleteSupplierService = async (id: string) => {
   try {
     const supplier = await Supplier.findByIdAndDelete(id);
     if (!supplier) throw createError("Supplier not found", 404);
+    if (supplier.docs?.photoUpload) await deleteS3Object(supplier.docs.photoUpload);
+    if (supplier.docs?.cvUpload) await deleteS3Object(supplier.docs.cvUpload);
     return supplier;
   } catch (error) {
     throw error;
@@ -139,4 +198,70 @@ export const searchActiveSuppliersService = async (searchTerm?: string) => {
   } catch (error) {
     throw error;
   }
+};
+
+export const uploadSupplierPhotoService = async (
+  id: string,
+  file: Express.Multer.File,
+  updatedBy: string
+) => {
+  const supplier = await Supplier.findById(id);
+  if (!supplier) throw createError("Supplier not found", 404);
+
+  const previous = supplier.docs?.photoUpload;
+  const { key } = await uploadSupplierFileToS3(file, id, "photo");
+
+  supplier.set("docs.photoUpload", key);
+  supplier.set("updatedBy", new mongoose.Types.ObjectId(updatedBy));
+  await supplier.save();
+
+  if (previous) await deleteS3Object(previous);
+  return { key };
+};
+
+export const uploadSupplierCvService = async (
+  id: string,
+  file: Express.Multer.File,
+  updatedBy: string
+) => {
+  const supplier = await Supplier.findById(id);
+  if (!supplier) throw createError("Supplier not found", 404);
+
+  const previous = supplier.docs?.cvUpload;
+  const { key } = await uploadSupplierFileToS3(file, id, "cv");
+
+  supplier.set("docs.cvUpload", key);
+  supplier.set("updatedBy", new mongoose.Types.ObjectId(updatedBy));
+  await supplier.save();
+
+  if (previous) await deleteS3Object(previous);
+  return { key };
+};
+
+export const deleteSupplierPhotoService = async (
+  id: string,
+  updatedBy: string
+) => {
+  const supplier = await Supplier.findById(id);
+  if (!supplier) throw createError("Supplier not found", 404);
+  const previous = supplier.docs?.photoUpload;
+  supplier.set("docs.photoUpload", undefined);
+  supplier.set("updatedBy", new mongoose.Types.ObjectId(updatedBy));
+  await supplier.save();
+  if (previous) await deleteS3Object(previous);
+  return { success: true };
+};
+
+export const deleteSupplierCvService = async (
+  id: string,
+  updatedBy: string
+) => {
+  const supplier = await Supplier.findById(id);
+  if (!supplier) throw createError("Supplier not found", 404);
+  const previous = supplier.docs?.cvUpload;
+  supplier.set("docs.cvUpload", undefined);
+  supplier.set("updatedBy", new mongoose.Types.ObjectId(updatedBy));
+  await supplier.save();
+  if (previous) await deleteS3Object(previous);
+  return { success: true };
 };
