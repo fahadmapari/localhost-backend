@@ -1,83 +1,34 @@
 /**
- * One-off migration: legacy Supplier shape → TRAVMONDE-aligned shape.
+ * One-off migration: normalise legacy-shaped supplier JSONB fields in PostgreSQL.
  *
  * Usage (dry-run by default):
  *   npx tsx src/scripts/migrate-suppliers.ts
  *   npx tsx src/scripts/migrate-suppliers.ts --apply
  *
- * Transforms applied per document:
- *   - address (singular object)                 → addresses: [<same>], isPrimary=true
- *   - personalInfo.availabilityTime (string)    → [] (old enum values don't map to new ones)
- *   - personalInfo.typeOfServicesProvided (str) → [] (old values were tour categories, not service roles)
+ * Transforms applied per row:
+ *   - personalInfo.availabilityTime (string)    → []
+ *   - personalInfo.typeOfServicesProvided (str) → []
  *   - contact.whatsapp (string)                 → { code: "", number: <string> }
  *   - experience.guidingLocation  ([string])    → [{ location }]
  *   - experience.guidingLanguages ([string])    → [{ language }]
- *   - contract.rateTiers (absent)               → seeded with 15 standard buckets (rate undefined)
+ *   - contract.rateTiers (absent/empty)         → seeded with 15 standard buckets
  *   - cancellationTerms ({hours, days1, days2}) → [{ type, value, percentage }, …]
- *   - amendments ({canBeAddedByClicking,…})     → []
- *   - locationSupplement (object)               → dropped; locationSupplements = []
- *   - languageSupplement (object)               → dropped; languageSupplements = []
- *
- * Fields that don't exist in legacy docs (title, transportationDetail, maxPax) remain undefined.
+ *   - amendments ({…})                          → []
+ *   - locationSupplements (non-array)           → []
+ *   - languageSupplements (non-array)           → []
  */
 
-import mongoose from "mongoose";
-import { connectDB } from "../db/mongoDB";
-import { STANDARD_RATE_TIER_HOURS } from "../models/supplier.model";
+import { db, connectDB } from "@/db";
+import { suppliers } from "@/db/schema";
+import { STANDARD_RATE_TIER_HOURS } from "@/config/constants";
+import { eq } from "drizzle-orm";
 
 const APPLY = process.argv.includes("--apply");
 
-type LegacyAddress = {
-  streetAndNumber?: string;
-  city?: string;
-  municipality?: string;
-  district?: string;
-  state?: string;
-  country?: string;
-  postalCode?: string;
-  isPrimary?: boolean;
-};
-
-type LegacyCancellationBucket = {
-  percentage?: number | null;
-  days?: number | null;
-};
-
-type LegacySupplier = {
-  _id: mongoose.Types.ObjectId;
-  personalInfo?: {
-    availabilityTime?: string | string[];
-    typeOfServicesProvided?: string | string[];
-    [k: string]: unknown;
-  };
-  address?: LegacyAddress;
-  addresses?: LegacyAddress[];
-  contact?: {
-    whatsapp?: string | { code?: string; number?: string };
-    [k: string]: unknown;
-  };
-  experience?: {
-    guidingLocation?: unknown;
-    guidingLanguages?: unknown;
-    [k: string]: unknown;
-  };
-  contract?: {
-    rateTiers?: { hours: number; rate?: number }[];
-    [k: string]: unknown;
-  };
-  cancellationTerms?:
-    | {
-        hours?: LegacyCancellationBucket;
-        days1?: LegacyCancellationBucket;
-        days2?: LegacyCancellationBucket;
-      }
-    | unknown[];
-  amendments?: unknown;
-  locationSupplement?: unknown;
-  languageSupplement?: unknown;
-  locationSupplements?: unknown[];
-  languageSupplements?: unknown[];
-};
+type CancellationBucket = { percentage?: number | null; days?: number | null };
+type LegacyCancellationTerms =
+  | { hours?: CancellationBucket; days1?: CancellationBucket; days2?: CancellationBucket }
+  | unknown[];
 
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
@@ -86,175 +37,132 @@ const isStringArray = (v: unknown): v is string[] =>
   Array.isArray(v) && v.every((x) => typeof x === "string");
 
 const normaliseCancellationTerms = (
-  legacy: LegacySupplier["cancellationTerms"]
+  legacy: LegacyCancellationTerms
 ): { type: "Hours" | "Days"; value: number; percentage?: number }[] => {
   if (!legacy || Array.isArray(legacy)) {
-    // Already array-shaped (or absent): no conversion needed.
     return Array.isArray(legacy)
-      ? (legacy as {
-          type: "Hours" | "Days";
-          value: number;
-          percentage?: number;
-        }[])
+      ? (legacy as { type: "Hours" | "Days"; value: number; percentage?: number }[])
       : [];
   }
-  const out: { type: "Hours" | "Days"; value: number; percentage?: number }[] =
-    [];
-  const push = (bucket: LegacyCancellationBucket | undefined, kind: "Hours" | "Days") => {
+  const out: { type: "Hours" | "Days"; value: number; percentage?: number }[] = [];
+  const push = (bucket: CancellationBucket | undefined, kind: "Hours" | "Days") => {
     if (!bucket) return;
     const value = bucket.days ?? undefined;
     const percentage = bucket.percentage ?? undefined;
     if (value == null && percentage == null) return;
-    out.push({
-      type: kind,
-      value: value ?? 0,
-      ...(percentage != null ? { percentage } : {}),
-    });
+    out.push({ type: kind, value: value ?? 0, ...(percentage != null ? { percentage } : {}) });
   };
-  push(legacy.hours, "Hours");
-  push(legacy.days1, "Days");
-  push(legacy.days2, "Days");
+  push((legacy as any).hours, "Hours");
+  push((legacy as any).days1, "Days");
+  push((legacy as any).days2, "Days");
   return out;
 };
 
-const transform = (doc: LegacySupplier) => {
-  const set: Record<string, unknown> = {};
-  const unset: Record<string, ""> = {};
+type SupplierUpdates = {
+  personalInfo?: unknown;
+  contact?: unknown;
+  experience?: unknown;
+  contract?: unknown;
+  cancellationTerms?: unknown;
+  amendments?: unknown;
+  locationSupplements?: unknown;
+  languageSupplements?: unknown;
+};
 
-  // addresses ---------------------------------------------------------------
-  if (!Array.isArray(doc.addresses) || doc.addresses.length === 0) {
-    if (isPlainObject(doc.address)) {
-      set["addresses"] = [{ ...doc.address, isPrimary: true }];
-    } else {
-      set["addresses"] = [];
-    }
+const computeUpdates = (row: typeof suppliers.$inferSelect): SupplierUpdates | null => {
+  const updates: SupplierUpdates = {};
+
+  // personalInfo.availabilityTime / typeOfServicesProvided
+  const pi = row.personalInfo as any;
+  let piUpdated = { ...pi };
+  let piChanged = false;
+  if (pi?.availabilityTime !== undefined && !Array.isArray(pi.availabilityTime)) {
+    piUpdated = { ...piUpdated, availabilityTime: [] };
+    piChanged = true;
   }
-  if (doc.address !== undefined) unset["address"] = "";
-
-  // personalInfo.availabilityTime (string → []) -----------------------------
-  if (
-    doc.personalInfo?.availabilityTime !== undefined &&
-    !Array.isArray(doc.personalInfo.availabilityTime)
-  ) {
-    set["personalInfo.availabilityTime"] = [];
+  if (pi?.typeOfServicesProvided !== undefined && !Array.isArray(pi.typeOfServicesProvided)) {
+    piUpdated = { ...piUpdated, typeOfServicesProvided: [] };
+    piChanged = true;
   }
+  if (piChanged) updates.personalInfo = piUpdated;
 
-  // personalInfo.typeOfServicesProvided (string → []) -----------------------
-  if (
-    doc.personalInfo?.typeOfServicesProvided !== undefined &&
-    !Array.isArray(doc.personalInfo.typeOfServicesProvided)
-  ) {
-    set["personalInfo.typeOfServicesProvided"] = [];
-  }
-
-  // contact.whatsapp (string → {code, number}) ------------------------------
-  if (typeof doc.contact?.whatsapp === "string") {
-    set["contact.whatsapp"] = {
-      code: "",
-      number: doc.contact.whatsapp,
-    };
+  // contact.whatsapp
+  const ct = row.contact as any;
+  if (typeof ct?.whatsapp === "string") {
+    updates.contact = { ...ct, whatsapp: { code: "", number: ct.whatsapp } };
   }
 
-  // experience.guidingLocation ([string] → [{location}]) --------------------
-  if (isStringArray(doc.experience?.guidingLocation)) {
-    set["experience.guidingLocation"] = (
-      doc.experience!.guidingLocation as string[]
-    ).map((location) => ({ location }));
+  // experience.guidingLocation / guidingLanguages
+  const exp = row.experience as any;
+  let expUpdated = { ...exp };
+  let expChanged = false;
+  if (isStringArray(exp?.guidingLocation)) {
+    expUpdated = { ...expUpdated, guidingLocation: exp.guidingLocation.map((loc: string) => ({ location: loc })) };
+    expChanged = true;
+  }
+  if (isStringArray(expUpdated?.guidingLanguages)) {
+    expUpdated = { ...expUpdated, guidingLanguages: expUpdated.guidingLanguages.map((lang: string) => ({ language: lang })) };
+    expChanged = true;
+  }
+  if (expChanged) updates.experience = expUpdated;
+
+  // contract.rateTiers
+  const contract = row.contract as any;
+  if (!Array.isArray(contract?.rateTiers) || contract.rateTiers.length === 0) {
+    updates.contract = { ...contract, rateTiers: STANDARD_RATE_TIER_HOURS.map((hours) => ({ hours })) };
   }
 
-  // experience.guidingLanguages ([string] → [{language}]) -------------------
-  if (isStringArray(doc.experience?.guidingLanguages)) {
-    set["experience.guidingLanguages"] = (
-      doc.experience!.guidingLanguages as string[]
-    ).map((language) => ({ language }));
+  // cancellationTerms
+  const terms = row.cancellationTerms;
+  if (isPlainObject(terms)) {
+    updates.cancellationTerms = normaliseCancellationTerms(terms as LegacyCancellationTerms);
+  } else if (!Array.isArray(terms)) {
+    updates.cancellationTerms = [];
   }
 
-  // contract.rateTiers (seed 15 buckets if absent) --------------------------
-  if (!Array.isArray(doc.contract?.rateTiers) || doc.contract!.rateTiers.length === 0) {
-    set["contract.rateTiers"] = STANDARD_RATE_TIER_HOURS.map((hours) => ({
-      hours,
-    }));
+  // amendments
+  if (isPlainObject(row.amendments)) {
+    updates.amendments = [];
   }
 
-  // cancellationTerms ({…} → [...]) -----------------------------------------
-  if (isPlainObject(doc.cancellationTerms)) {
-    set["cancellationTerms"] = normaliseCancellationTerms(doc.cancellationTerms);
-  }
+  // locationSupplements / languageSupplements
+  if (!Array.isArray(row.locationSupplements)) updates.locationSupplements = [];
+  if (!Array.isArray(row.languageSupplements)) updates.languageSupplements = [];
 
-  // amendments ({…} → []) ---------------------------------------------------
-  if (isPlainObject(doc.amendments)) {
-    set["amendments"] = [];
-  }
-
-  // locationSupplement / languageSupplement (obj → drop + plural empty) ----
-  if (doc.locationSupplement !== undefined) {
-    unset["locationSupplement"] = "";
-    if (!Array.isArray(doc.locationSupplements)) {
-      set["locationSupplements"] = [];
-    }
-  }
-  if (doc.languageSupplement !== undefined) {
-    unset["languageSupplement"] = "";
-    if (!Array.isArray(doc.languageSupplements)) {
-      set["languageSupplements"] = [];
-    }
-  }
-
-  return { set, unset };
+  return Object.keys(updates).length > 0 ? updates : null;
 };
 
 const run = async () => {
   await connectDB();
 
-  const collection = mongoose.connection.collection("guides");
-  const cursor = collection.find<LegacySupplier>({});
+  const rows = await db.query.suppliers.findMany();
 
   let total = 0;
   let changed = 0;
-  const ops: mongoose.mongo.AnyBulkWriteOperation[] = [];
 
-  for await (const doc of cursor) {
-    total += 1;
-    const { set, unset } = transform(doc);
+  for (const row of rows) {
+    total++;
+    const updates = computeUpdates(row);
+    if (!updates) continue;
 
-    const hasSet = Object.keys(set).length > 0;
-    const hasUnset = Object.keys(unset).length > 0;
-    if (!hasSet && !hasUnset) continue;
-
-    changed += 1;
-    const update: Record<string, unknown> = {};
-    if (hasSet) update.$set = set;
-    if (hasUnset) update.$unset = unset;
+    changed++;
 
     if (!APPLY && changed <= 3) {
-      console.log(
-        `[dry-run] _id=${doc._id} →`,
-        JSON.stringify(update, null, 2)
-      );
+      console.log(`[dry-run] id=${row.id} →`, JSON.stringify(updates, null, 2));
     }
 
-    ops.push({
-      updateOne: {
-        filter: { _id: doc._id },
-        update: update as mongoose.mongo.UpdateFilter<mongoose.mongo.Document>,
-      },
-    });
+    if (APPLY) {
+      await db.update(suppliers).set(updates).where(eq(suppliers.id, row.id));
+    }
   }
 
   console.log(
     `\nScanned ${total} supplier(s); ${changed} require migration.${
-      APPLY ? "" : " (dry-run — pass --apply to commit)"
+      APPLY ? ` Applied.` : " (dry-run — pass --apply to commit)"
     }`
   );
 
-  if (APPLY && ops.length > 0) {
-    const result = await collection.bulkWrite(ops, { ordered: false });
-    console.log(
-      `Applied: matched=${result.matchedCount} modified=${result.modifiedCount}`
-    );
-  }
-
-  await mongoose.disconnect();
+  process.exit(0);
 };
 
 run().catch((err) => {

@@ -1,177 +1,131 @@
-import Product, { ProductVariant } from "../models/product.model";
+import { db } from "@/db";
+import { products, productVariants } from "@/db/schema";
+import { eq, sql, desc, gte, ilike, inArray, or, and } from "drizzle-orm";
 import { DeleteObjectsCommand, PutObjectCommand } from "@aws-sdk/client-s3";
-import { S3_BUCKET_NAME } from "../config/env";
+import { S3_BUCKET_NAME } from "@/config/env";
 import { randomUUID } from "crypto";
 import path from "path";
-import s3Client from "../config/s3";
-import { ProductType } from "../schema/product.schema";
+import s3Client from "@/config/s3";
+import { ProductType } from "@/schema/product.schema";
 import dayjs from "dayjs";
-import mongoose from "mongoose";
 import slug from "slug";
 import { nanoid } from "nanoid";
-import { PRODUCT_CODE_KEY_PREFIX } from "../config/constants";
-import { EditedProduct } from "../types/product.types";
+import { PRODUCT_CODE_KEY_PREFIX } from "@/config/constants";
+import { EditedProduct } from "@/types/product.types";
 import _ from "lodash";
-import { createError } from "../utils/errorHandlers";
-import { enqueueProductEmbeddingJob } from "../jobs/product-embedding.job";
+import { createError } from "@/utils/errorHandlers";
+import { enqueueProductEmbeddingJob } from "@/jobs/product-embedding.job";
+import type { ProductVariant, Product } from "@/db/schema";
 
 export const updateProductById = async (
   id: string,
   editedProduct: EditedProduct,
   files: Express.Multer.File[],
 ) => {
-  try {
-    const oldBaseProduct = await Product.findById(editedProduct.baseProductId);
-    const oldProduct = await ProductVariant.findById(editedProduct.id);
+  const oldBaseProduct = await db.query.products.findFirst({
+    where: eq(products.id, editedProduct.baseProductId),
+  });
+  const oldProduct = await db.query.productVariants.findFirst({
+    where: eq(productVariants.id, editedProduct.id),
+  });
 
-    if (oldProduct?.bookingType !== editedProduct.bookingType) {
-      // TODO: update base product array
-      if (
-        (editedProduct.bookingType === "instant" &&
-          oldBaseProduct?.tourGuideLanguageInstant?.includes(
-            editedProduct.tourGuideLanguage,
-          )) ||
-        (editedProduct.bookingType === "request" &&
-          oldBaseProduct?.tourGuideLanguageOnRequest?.includes(
-            editedProduct.tourGuideLanguage,
-          ))
-      ) {
-        throw createError("Product already exists", 400);
-      }
+  if (oldProduct?.bookingType !== editedProduct.bookingType) {
+    const instantLangs = (oldBaseProduct?.tourGuideLanguageInstant ?? []) as string[];
+    const onRequestLangs = (oldBaseProduct?.tourGuideLanguageOnRequest ?? []) as string[];
 
-      if (editedProduct.bookingType === "instant") {
-        await Product.findByIdAndUpdate(editedProduct.baseProductId, {
-          $push: {
-            tourGuideLanguageInstant: editedProduct.tourGuideLanguage,
-          },
-          $pull: {
-            tourGuideLanguageOnRequest: editedProduct.tourGuideLanguage,
-          },
-        });
-      } else {
-        await Product.findByIdAndUpdate(editedProduct.baseProductId, {
-          $push: {
-            tourGuideLanguageOnRequest: editedProduct.tourGuideLanguage,
-          },
-          $pull: {
-            tourGuideLanguageInstant: editedProduct.tourGuideLanguage,
-          },
-        });
-      }
+    if (
+      (editedProduct.bookingType === "instant" && instantLangs.includes(editedProduct.tourGuideLanguage)) ||
+      (editedProduct.bookingType === "request" && onRequestLangs.includes(editedProduct.tourGuideLanguage))
+    ) {
+      throw createError("Product already exists", 400);
     }
 
-    const deletedImages =
-      editedProduct?.existingImages && editedProduct?.existingImages.length
-        ? _.difference(
-            oldBaseProduct?.images,
-            editedProduct?.existingImages || [],
-          )
-        : [];
-
-    if (deletedImages.length > 0) {
-      await deleteMultipleImages(deletedImages);
-      await Product.findByIdAndUpdate(editedProduct.baseProductId, {
-        images: editedProduct.existingImages,
-      });
+    if (editedProduct.bookingType === "instant") {
+      await db.update(products).set({
+        tourGuideLanguageInstant: [...instantLangs, editedProduct.tourGuideLanguage],
+        tourGuideLanguageOnRequest: onRequestLangs.filter((l) => l !== editedProduct.tourGuideLanguage),
+      }).where(eq(products.id, editedProduct.baseProductId));
+    } else {
+      await db.update(products).set({
+        tourGuideLanguageOnRequest: [...onRequestLangs, editedProduct.tourGuideLanguage],
+        tourGuideLanguageInstant: instantLangs.filter((l) => l !== editedProduct.tourGuideLanguage),
+      }).where(eq(products.id, editedProduct.baseProductId));
     }
-
-    if (files.length > 0) {
-      const newUploadedImages = await uploadProductImages(
-        files,
-        editedProduct.title,
-      );
-      await Product.updateOne(
-        { _id: editedProduct.baseProductId },
-        {
-          $push: {
-            images: { $each: newUploadedImages },
-          },
-        },
-      );
-    }
-
-    const updatedProduct = await ProductVariant.findByIdAndUpdate(
-      id,
-      editedProduct,
-    );
-
-    return updatedProduct;
-  } catch (error) {
-    throw error;
   }
+
+  const existingImages = editedProduct.existingImages ?? [];
+  const oldImages = (oldBaseProduct?.images ?? []) as string[];
+  const deletedImages = existingImages.length ? _.difference(oldImages, existingImages) : [];
+
+  if (deletedImages.length > 0) {
+    await deleteMultipleImages(deletedImages);
+    await db.update(products).set({ images: existingImages }).where(eq(products.id, editedProduct.baseProductId));
+  }
+
+  if (files.length > 0) {
+    const newImages = await uploadProductImages(files, editedProduct.title);
+    const currentImages = (
+      await db.query.products.findFirst({ where: eq(products.id, editedProduct.baseProductId) })
+    )?.images as string[] ?? [];
+    await db.update(products).set({ images: [...currentImages, ...newImages] }).where(eq(products.id, editedProduct.baseProductId));
+  }
+
+  const { baseProductId, existingImages: _ei, id: _id, ...variantFields } = editedProduct as any;
+
+  const [updatedProduct] = await db
+    .update(productVariants)
+    .set(variantFields)
+    .where(eq(productVariants.id, id))
+    .returning();
+
+  return updatedProduct;
 };
 
 export const findProductById = async (id: string) => {
-  const product = await ProductVariant.findById({
-    _id: id,
-  })
-    .populate("baseProduct")
-    .lean();
-  return product;
+  return db.query.productVariants.findFirst({
+    where: eq(productVariants.id, id),
+    with: { baseProduct: true },
+  });
 };
 
 export const fetchProductMetrics = async () => {
-  try {
-    const totalProductsCount =
-      await ProductVariant.estimatedDocumentCount().lean();
-    const totalInstantProductsCount = await ProductVariant.countDocuments({
-      bookingType: "instant",
-    }).lean();
-    const totalOnRequestProductsCount = await ProductVariant.countDocuments({
-      bookingType: "request",
-    }).lean();
+  const yearBackDate = dayjs().subtract(1, "year").toDate();
 
-    const yearBackDate = dayjs().subtract(1, "year").toDate();
+  const [
+    [{ totalProductsCount }],
+    [{ totalInstantProductsCount }],
+    [{ totalOnRequestProductsCount }],
+    last12MonthProducts,
+    [{ totalUniqueProductCount }],
+    topCountriesRaw,
+    topCitiesRaw,
+  ] = await Promise.all([
+    db.select({ totalProductsCount: sql<number>`count(*)::int` }).from(productVariants),
+    db.select({ totalInstantProductsCount: sql<number>`count(*)::int` }).from(productVariants).where(eq(productVariants.bookingType, "instant")),
+    db.select({ totalOnRequestProductsCount: sql<number>`count(*)::int` }).from(productVariants).where(eq(productVariants.bookingType, "request")),
+    db.select({ createdAt: products.createdAt }).from(products).where(gte(products.createdAt, yearBackDate)),
+    db.select({ totalUniqueProductCount: sql<number>`count(*)::int` }).from(products),
+    db.execute(
+      sql`SELECT (meeting_point->>'country') AS country, count(*)::int AS count FROM product_variants GROUP BY country ORDER BY count DESC LIMIT 10`,
+    ),
+    db.execute(
+      sql`SELECT (meeting_point->>'city') AS city, count(*)::int AS count FROM product_variants GROUP BY city ORDER BY count DESC LIMIT 10`,
+    ),
+  ]);
 
-    const last12MonthProducts = await Product.find({
-      createdAt: {
-        $gte: yearBackDate,
-      },
-    })
-      .select("createdAt")
-      .lean();
+  const topCountriesAndCities = [{
+    topCountries: (topCountriesRaw as any[]).map((r: any) => ({ _id: r.country, count: r.count })),
+    topCities: (topCitiesRaw as any[]).map((r: any) => ({ _id: r.city, count: r.count })),
+  }];
 
-    const totalUniqueProductCount =
-      await Product.estimatedDocumentCount().lean();
-
-    const topCountriesAndCities = await ProductVariant.aggregate([
-      {
-        $facet: {
-          topCountries: [
-            {
-              $group: {
-                _id: "$meetingPoint.country",
-                count: { $sum: 1 },
-              },
-            },
-            { $sort: { count: -1 } },
-            { $limit: 10 },
-          ],
-          topCities: [
-            {
-              $group: {
-                _id: "$meetingPoint.city",
-                count: { $sum: 1 },
-              },
-            },
-            { $sort: { count: -1 } },
-            { $limit: 10 },
-          ],
-        },
-      },
-    ]).exec();
-
-    return {
-      totalProductsCount,
-      totalInstantProductsCount,
-      totalOnRequestProductsCount,
-      last12MonthProducts,
-      totalUniqueProductCount,
-      topCountriesAndCities,
-    };
-  } catch (error) {
-    throw error;
-  }
+  return {
+    totalProductsCount,
+    totalInstantProductsCount,
+    totalOnRequestProductsCount,
+    last12MonthProducts,
+    totalUniqueProductCount,
+    topCountriesAndCities,
+  };
 };
 
 export const getAllProducts = async (
@@ -180,168 +134,169 @@ export const getAllProducts = async (
   bookingType: string,
   searchTerm: string,
 ) => {
-  try {
-    const filters: Record<string, any> = {};
+  const conditions = [];
 
-    if (searchTerm) {
-      filters.$text = { $search: searchTerm };
-    }
-
-    if (bookingType === "all") {
-      filters.bookingType = { $in: ["instant", "request"] };
-    }
-
-    if (bookingType === "instant") {
-      filters.bookingType = "instant";
-    }
-
-    if (bookingType === "request") {
-      filters.bookingType = "request";
-    }
-
-    const products = await ProductVariant.find(filters)
-      .sort({ createdAt: -1 })
-      .skip(page * limit)
-      .limit(limit)
-      .populate("baseProduct")
-      .lean();
-    const productsCount = await ProductVariant.countDocuments(filters).lean();
-    return { products, totalProducts: productsCount };
-  } catch (error) {
-    throw error;
+  if (searchTerm) {
+    conditions.push(ilike(productVariants.description, `%${searchTerm}%`));
   }
+
+  if (bookingType === "instant") conditions.push(eq(productVariants.bookingType, "instant"));
+  else if (bookingType === "request") conditions.push(eq(productVariants.bookingType, "request"));
+  else conditions.push(inArray(productVariants.bookingType, ["instant", "request"]));
+
+  const where = conditions.length > 1 ? and(...conditions) : conditions[0];
+
+  const [variantRows, [{ total }]] = await Promise.all([
+    db.query.productVariants.findMany({
+      where,
+      with: { baseProduct: true },
+      orderBy: [desc(productVariants.createdAt)],
+      limit,
+      offset: page * limit,
+    }),
+    db.select({ total: sql<number>`count(*)::int` }).from(productVariants).where(where),
+  ]);
+
+  return { products: variantRows, totalProducts: total };
 };
 
 export const addNewProduct = async (product: ProductType, images: string[]) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  let createdProduct: Awaited<ReturnType<typeof Product.create>>[number] | null =
-    null;
-  let createdProducts: Awaited<ReturnType<typeof Product.create>> | null = null;
-
-  try {
-    createdProducts = await Product.create([{ ...product, images }], {
-      session: session,
-    });
-    createdProduct = createdProducts[0];
-    const baseProductId = createdProduct._id;
+  return db.transaction(async (tx) => {
+    const [createdProduct] = await tx
+      .insert(products)
+      .values({
+        title: product.title,
+        tourTextLanguage: product.tourTextLanguage as Product["tourTextLanguage"],
+        tourGuideLanguageInstant: product.tourGuideLanguageInstant ?? [],
+        tourGuideLanguageOnRequest: product.tourGuideLanguageOnRequest,
+        images,
+      })
+      .returning();
 
     const productTitle = slug(createdProduct.title);
+    const instantLangs = product.tourGuideLanguageInstant ?? [];
+    const onRequestLangs = product.tourGuideLanguageOnRequest ?? [];
 
-    const instantProducts = product.tourGuideLanguageInstant?.map((p) => {
-      const productCode = PRODUCT_CODE_KEY_PREFIX + nanoid(6);
-      return {
-        ...product,
-        baseProduct: baseProductId,
-        bookingType: "instant",
-        tourGuideLanguage: p,
-        url: productTitle + "-" + productCode.toUpperCase(),
-        productCode: productCode.toUpperCase(),
-      };
-    });
+    const variantRows = [
+      ...instantLangs.map((lang: string) => {
+        const productCode = (PRODUCT_CODE_KEY_PREFIX + nanoid(6)).toUpperCase();
+        return {
+          ...buildVariantFields(product, createdProduct.id),
+          bookingType: "instant" as const,
+          tourGuideLanguage: lang,
+          url: `${productTitle}-${productCode}`,
+          productCode,
+        };
+      }),
+      ...onRequestLangs.map((lang: string) => {
+        const productCode = (PRODUCT_CODE_KEY_PREFIX + nanoid(6)).toUpperCase();
+        return {
+          ...buildVariantFields(product, createdProduct.id),
+          bookingType: "request" as const,
+          tourGuideLanguage: lang,
+          url: `${productTitle}-${productCode}`,
+          productCode,
+        };
+      }),
+    ];
 
-    const onRequestProducts = product.tourGuideLanguageOnRequest?.map((p) => {
-      const productCode = PRODUCT_CODE_KEY_PREFIX + nanoid(6);
-      return {
-        ...product,
-        baseProduct: baseProductId,
-        bookingType: "request",
-        tourGuideLanguage: p,
-        url: productTitle + "-" + productCode.toUpperCase(),
-        productCode: productCode.toUpperCase(),
-      };
-    });
-
-    const productVariants = [instantProducts, onRequestProducts].flat();
-
-    await ProductVariant.insertMany(productVariants, {
-      session: session,
-    });
-
-    await session.commitTransaction();
-
-    if (!createdProduct || !createdProducts) {
-      throw new Error("Product creation failed.");
-    }
+    await tx.insert(productVariants).values(variantRows);
 
     try {
-      await enqueueProductEmbeddingJob(createdProduct._id.toString());
-    } catch (error) {
-      console.error("Failed to enqueue product embedding job", error);
-      await Product.findByIdAndUpdate(createdProduct._id, {
-        embeddingStatus: "failed",
-        embeddingLastError: "Failed to enqueue embedding job.",
-      });
+      await enqueueProductEmbeddingJob(createdProduct.id);
+    } catch (err) {
+      console.error("Failed to enqueue product embedding job", err);
+      await tx.update(products)
+        .set({ embeddingStatus: "failed", embeddingLastError: "Failed to enqueue embedding job." })
+        .where(eq(products.id, createdProduct.id));
     }
 
-    return createdProducts;
-  } catch (error) {
-    await session.abortTransaction();
-    await deleteMultipleImages(images);
-    throw error;
-  } finally {
-    session.endSession();
-  }
+    return createdProduct;
+  });
 };
+
+const buildVariantFields = (product: ProductType, baseProductId: string) => ({
+  baseProductId,
+  serviceType: product.serviceType as ProductVariant["serviceType"],
+  tourType: product.tourType as ProductVariant["tourType"],
+  activityType: product.activityType as ProductVariant["activityType"],
+  subType: product.subType as ProductVariant["subType"],
+  description: product.description,
+  willSee: product.willSee,
+  willLearn: product.willLearn,
+  mandatoryInformation: product.mandatoryInformation,
+  recommendedInformation: product.recommdendedInformation,
+  included: product.included,
+  excluded: product.excluded ?? [],
+  activitySuitableFor: product.activitySuitableFor as ProductVariant["activitySuitableFor"],
+  voucherType: product.voucherType as ProductVariant["voucherType"],
+  maxPax: product.maxPax,
+  meetingPoint: product.meetingPoint,
+  endPoint: product.endPoint,
+  tags: product.tags,
+  closedDates: product.closedDates?.map((d: Date) => d.toISOString().split("T")[0]) ?? [],
+  holidayDates: product.holidayDates?.map((d: Date) => d.toISOString().split("T")[0]) ?? [],
+  availability: product.availability,
+  cancellationTerms: product.cancellationTerms,
+  release: product.realease,
+  firstRoundReview: product.firstRoundReview ?? false,
+  firstRoundReviewRemarks: product.firstRoundReviewRemarks ?? [],
+  secondRoundReview: product.secondRoundReview ?? false,
+  secondRoundReviewRemarks: product.secondRoundReviewRemarks ?? [],
+  priceModel: product.priceModel as ProductVariant["priceModel"],
+  currency: product.currency as ProductVariant["currency"],
+  b2bRateInstant: String(product.b2bRateInstant),
+  b2bExtraHourSupplementInstant: String(product.b2bExtraHourSupplementInsant ?? 0),
+  b2bRateOnRequest: String(product.b2bRateOnRequest),
+  b2bExtraHourSupplementOnRequest: String(product.b2bExtraHourSupplementOnRequest ?? 0),
+  b2cRateInstant: String(product.b2cRateInstant),
+  b2cExtraHourSupplementInstant: String(product.b2cExtraHourSupplementInstant ?? 0),
+  b2cRateOnRequest: String(product.b2cRateOnRequest),
+  b2cExtraHourSupplementOnRequest: String(product.b2cExtraHourSupplementOnRequest ?? 0),
+  publicHolidaySupplementPercent: product.publicHolidaySupplementPercent != null ? String(product.publicHolidaySupplementPercent) : null,
+  weekendSupplementPercent: product.weekendSupplementPercent != null ? String(product.weekendSupplementPercent) : null,
+  isB2B: product.isB2B ?? true,
+  isB2C: product.isB2C ?? true,
+  overridePriceFromContract: product.overridePriceFromContract ?? false,
+  isBookingPerProduct: product.isBookingPerProduct ?? false,
+});
 
 export const deleteMultipleImages = async (images: string[]) => {
   try {
     const command = new DeleteObjectsCommand({
       Bucket: S3_BUCKET_NAME,
-      Delete: {
-        Objects: images.map((image) => ({ Key: image })),
-      },
+      Delete: { Objects: images.map((image) => ({ Key: image })) },
     });
-
-    const result = await s3Client.send(command);
-    return result;
+    return await s3Client.send(command);
   } catch (err) {
     console.error("Error deleting images:", err);
   }
 };
 
-export const uploadProductImages = async (
-  files: Express.Multer.File[],
-  title: string,
-) => {
-  try {
-    const uploadedImages: string[] = [];
+export const uploadProductImages = async (files: Express.Multer.File[], title: string) => {
+  const uploadedImages: string[] = [];
 
-    for (const file of files) {
-      const key = `products/product-${randomUUID()}-${title}-${path.extname(
-        file.originalname,
-      )}`;
+  for (const file of files) {
+    const key = `products/product-${randomUUID()}-${title}-${path.extname(file.originalname)}`;
 
-      const command = new PutObjectCommand({
+    await s3Client.send(
+      new PutObjectCommand({
         Bucket: S3_BUCKET_NAME,
         Key: key,
         Body: file.buffer,
         ContentType: file.mimetype,
-      });
-
-      await s3Client.send(command);
-      uploadedImages.push(key);
-    }
-
-    return uploadedImages;
-  } catch (error) {
-    throw error;
+      }),
+    );
+    uploadedImages.push(key);
   }
+
+  return uploadedImages;
 };
 
 export const searchProuductsByTextService = async (searchTerm: string) => {
-  try {
-    const products = await ProductVariant.find({
-      $text: {
-        $search: searchTerm,
-      },
-    })
-      .sort({ createdAt: -1 })
-      .populate("baseProduct")
-      .lean();
-
-    return products;
-  } catch (error) {
-    throw error;
-  }
+  return db.query.productVariants.findMany({
+    where: ilike(productVariants.description, `%${searchTerm}%`),
+    with: { baseProduct: true },
+    orderBy: [desc(productVariants.createdAt)],
+  });
 };

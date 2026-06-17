@@ -6,7 +6,7 @@ config({
 
 export const {
   PORT,
-  DB_URI,
+  DATABASE_URL,
   NODE_ENV,
   JWT_SECRET,
   JWT_EXP_IN,

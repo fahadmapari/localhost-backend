@@ -1,13 +1,15 @@
-import Product, { ProductVariant } from "../models/product.model";
-import { ai } from "../config/ai";
-import { pc } from "../config/pinecone";
+import { db } from "@/db";
+import { products, productVariants } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { ai } from "@/config/ai";
+import { pc } from "@/config/pinecone";
 
 function buildEmbeddingContent(product: any) {
   return `
-      title: ${product.title}, 
-      description: ${product.description}, 
-      Instant Languages: ${product.tourGuideLanguageInstant?.join(", ")},
-      On Request Languages: ${product.tourGuideLanguageOnRequest?.join(", ")},
+      title: ${product.title},
+      description: ${product.description},
+      Instant Languages: ${(product.tourGuideLanguageInstant ?? []).join(", ")},
+      On Request Languages: ${(product.tourGuideLanguageOnRequest ?? []).join(", ")},
       tour duration: ${product.availability.duration.value + product.availability.duration.unit},
       Meeting point for tour: ${product.meetingPoint.text}
       `;
@@ -15,24 +17,25 @@ function buildEmbeddingContent(product: any) {
 
 export const syncProductEmbedding = async (baseProductId: string) => {
   try {
-    await Product.findByIdAndUpdate(baseProductId, {
-      embeddingStatus: "processing",
-      embeddingLastError: null,
-    });
+    await db.update(products)
+      .set({ embeddingStatus: "processing", embeddingLastError: null })
+      .where(eq(products.id, baseProductId));
 
-    const variant = await ProductVariant.findOne({
-      baseProduct: baseProductId,
-    })
-      .populate("baseProduct")
-      .lean();
+    const variant = await db.query.productVariants.findFirst({
+      where: eq(productVariants.baseProductId, baseProductId),
+      with: { baseProduct: true },
+    });
 
     const baseProduct = variant?.baseProduct as any;
 
-    if (!variant || !baseProduct?._id) {
+    if (!variant || !baseProduct?.id) {
       throw new Error("Product variant or base product not found.");
     }
 
-    if (!variant.meetingPoint || !variant.availability?.duration) {
+    const mp = variant.meetingPoint as any;
+    const avail = variant.availability as any;
+
+    if (!mp || !avail?.duration) {
       throw new Error("Product variant is missing embedding fields.");
     }
 
@@ -43,23 +46,18 @@ export const syncProductEmbedding = async (baseProductId: string) => {
         description: variant.description,
         tourGuideLanguageInstant: baseProduct.tourGuideLanguageInstant ?? [],
         tourGuideLanguageOnRequest: baseProduct.tourGuideLanguageOnRequest ?? [],
-        availability: variant.availability,
-        meetingPoint: variant.meetingPoint,
+        availability: avail,
+        meetingPoint: mp,
       }),
-      config: {
-        outputDimensionality: 768,
-      },
+      config: { outputDimensionality: 768 },
     });
 
     const embeddingValues = embeddedProduct.embeddings?.[0]?.values;
-
     if (!embeddingValues || embeddingValues.length === 0) {
       throw new Error("No embedding values returned from Gemini.");
     }
 
-    const index = pc.index({
-      name: "tours",
-    });
+    const index = pc.index({ name: "tours" });
 
     await index.upsert({
       records: [
@@ -68,9 +66,9 @@ export const syncProductEmbedding = async (baseProductId: string) => {
           values: embeddingValues,
           metadata: {
             title: baseProduct.title,
-            city: variant.meetingPoint.city,
-            country: variant.meetingPoint.country,
-            duration: variant.availability.duration.value,
+            city: mp.city,
+            country: mp.country,
+            duration: avail.duration.value,
             b2bPriceInstant: variant.b2bRateInstant,
             b2cPriceInstant: variant.b2cRateInstant,
             b2bPriceOnRequest: variant.b2bRateOnRequest,
@@ -80,19 +78,14 @@ export const syncProductEmbedding = async (baseProductId: string) => {
       ],
     });
 
-    await Product.findByIdAndUpdate(baseProductId, {
-      embeddingStatus: "completed",
-      embeddingLastError: null,
-    });
+    await db.update(products)
+      .set({ embeddingStatus: "completed", embeddingLastError: null })
+      .where(eq(products.id, baseProductId));
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Embedding sync failed.";
-
-    await Product.findByIdAndUpdate(baseProductId, {
-      embeddingStatus: "failed",
-      embeddingLastError: message,
-    });
-
+    const message = error instanceof Error ? error.message : "Embedding sync failed.";
+    await db.update(products)
+      .set({ embeddingStatus: "failed", embeddingLastError: message })
+      .where(eq(products.id, baseProductId));
     throw error;
   }
 };

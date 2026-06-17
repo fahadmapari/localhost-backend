@@ -1,11 +1,10 @@
 export interface UserRef {
-  _id: string;
+  id: string;
   name: string;
   email: string;
   role: string;
-  createdAt: string; // ISO date string
-  updatedAt: string; // ISO date string
-  __v: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PhoneNumber {
@@ -14,7 +13,7 @@ export interface PhoneNumber {
 }
 
 export interface CompanyInformation {
-  _id: string;
+  id: string;
   name: string;
   address: string;
   zipCode: string;
@@ -31,10 +30,9 @@ export interface CompanyInformation {
 }
 
 export interface ClientProfile {
-  _id: string;
+  id: string;
   userId: UserRef;
   status: boolean;
-  profileType: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -44,7 +42,6 @@ export interface ClientProfile {
   position: string;
   boardedFromOnlinePortal: boolean;
   companyInformation: CompanyInformation;
-  createdAt: string; // ISO date string
-  updatedAt: string; // ISO date string
-  __v: number;
+  createdAt: string;
+  updatedAt: string;
 }

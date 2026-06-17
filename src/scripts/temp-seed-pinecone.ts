@@ -1,40 +1,31 @@
-import mongoose from "mongoose";
-import { connectDB } from "../db/mongoDB";
-import { ProductVariant } from "../models/product.model";
-import { syncProductEmbedding } from "../services/product-embedding.service";
+import { db, connectDB } from "@/db";
+import { syncProductEmbedding } from "@/services/product-embedding.service";
 
 async function seedPineconeEmbeddings() {
   await connectDB();
 
   try {
-    const variants = await ProductVariant.find({})
-      .populate("baseProduct")
-      .lean();
+    const variants = await db.query.productVariants.findMany({
+      with: { baseProduct: true },
+    });
 
-    const uniqueProducts = new Map<string, any>();
-
+    const uniqueProductIds = new Set<string>();
     for (const variant of variants) {
-      const baseProduct = variant.baseProduct as any;
-
-      if (!baseProduct?._id || uniqueProducts.has(baseProduct._id.toString())) {
-        continue;
+      if (variant.baseProduct?.id) {
+        uniqueProductIds.add(variant.baseProduct.id);
       }
-
-      uniqueProducts.set(baseProduct._id.toString(), baseProduct._id.toString());
     }
 
     let processed = 0;
-
-    for (const baseProductId of uniqueProducts.values()) {
+    for (const baseProductId of uniqueProductIds) {
       await syncProductEmbedding(baseProductId);
-
-      processed += 1;
+      processed++;
       console.log(`Upserted embedding for product ${baseProductId}`);
     }
 
     console.log(`Completed Pinecone seed. Total upserted: ${processed}`);
   } finally {
-    await mongoose.disconnect();
+    process.exit(0);
   }
 }
 

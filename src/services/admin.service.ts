@@ -1,62 +1,40 @@
-import User from "../models/user.model";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { eq, inArray, desc } from "drizzle-orm";
 import { z } from "zod";
-import { userSchema } from "../schema/user.schema";
-import { hashPassword } from "../utils/common";
-import { createError } from "../utils/errorHandlers";
+import { userSchema } from "@/schema/user.schema";
+import { hashPassword } from "@/utils/common";
+import { createError } from "@/utils/errorHandlers";
+import type { User } from "@/db/schema";
 
-export const changeAdminPasswordService = async (
-  userId: string,
-  newPassword: string
-) => {
-  try {
-    const foundUser = await User.findById(userId);
+export const changeAdminPasswordService = async (userId: string, newPassword: string) => {
+  const foundUser = await db.query.users.findFirst({ where: eq(users.id, userId) });
+  if (!foundUser) throw createError("User not found", 404);
 
-    if (!foundUser) {
-      throw createError("User not found", 404);
-    }
-    const hashedPassword = await hashPassword(newPassword);
-
-    await foundUser.updateOne({
-      password: hashedPassword,
-    });
-  } catch (error) {
-    throw error;
-  }
+  const hashedPassword = await hashPassword(newPassword);
+  await db.update(users).set({ password: hashedPassword }).where(eq(users.id, userId));
 };
 
-export const createNewAdminService = async (
-  values: z.infer<typeof userSchema>
-) => {
-  try {
-    const hashedPassword = await hashPassword(values.password);
+export const createNewAdminService = async (values: z.infer<typeof userSchema>) => {
+  const hashedPassword = await hashPassword(values.password);
 
-    const newAdmin = await User.create({
+  const [newAdmin] = await db
+    .insert(users)
+    .values({
       name: values.name,
       email: values.email,
       password: hashedPassword,
-      role: values.role,
-    });
+      role: values.role as User["role"],
+    })
+    .returning();
 
-    return newAdmin;
-  } catch (error) {
-    throw error;
-  }
+  return newAdmin;
 };
 
 export const getAllAdminsService = async () => {
-  try {
-    const admins = await User.find({
-      role: {
-        $in: ["super admin", "admin"],
-      },
-    })
-      .sort({
-        createdAt: -1,
-      })
-      .lean();
-
-    return admins;
-  } catch (error) {
-    throw error;
-  }
+  return db
+    .select()
+    .from(users)
+    .where(inArray(users.role, ["super admin", "admin"]))
+    .orderBy(desc(users.createdAt));
 };

@@ -3,7 +3,7 @@ import express from "express";
 import { PORT } from "./config/env";
 import userRouter from "./routes/user.routes";
 import authRouter from "./routes/auth.routes";
-import { connectDB } from "./db/mongoDB";
+import { connectDB } from "./db";
 import globalErrorMiddleware from "./middlewares/error.middleware";
 import cookieParser from "cookie-parser";
 import { arcjetMiddleware } from "./middlewares/arcjet.middleware";

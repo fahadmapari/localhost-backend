@@ -1,17 +1,15 @@
-import mongoose from "mongoose";
-import User, { UserDocument } from "../models/user.model";
-import { createError } from "../utils/errorHandlers";
-import bcrypt from "bcrypt";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { createError } from "@/utils/errorHandlers";
+import { eq } from "drizzle-orm";
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import redisClient from "@/config/redis";
 import {
-  JWT_EXP_IN,
-  JWT_REFRESH_EXP_IN,
   JWT_REFRESH_SECRET,
   JWT_SECRET,
   THIRTY_DAYS,
-} from "../config/env";
-import crypto from "crypto";
-import redisClient from "../config/redis";
+} from "@/config/env";
 import {
   comparePassword,
   generateAccessToken,
@@ -19,83 +17,43 @@ import {
   hashPassword,
   verifyRefreshToken,
   verifyToken,
-} from "../utils/common";
+} from "@/utils/common";
+import type { User } from "@/db/schema";
 
 export const signupUser = async (
   name: string,
   email: string,
   password: string,
   role: string,
-): Promise<{
-  accessToken: string;
-  refreshToken: string;
-  user: UserDocument;
-}> => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    const existingUser = await User.findOne({
-      email,
+): Promise<{ accessToken: string; refreshToken: string; user: User }> => {
+  return db.transaction(async (tx) => {
+    const existing = await tx.query.users.findFirst({
+      where: eq(users.email, email),
     });
 
-    if (existingUser) {
-      throw createError("User already exists", 409);
-    }
+    if (existing) throw createError("User already exists", 409);
 
-    // HASH PASSWORD
     const hashedPassword = await hashPassword(password);
 
-    const newUser = await User.create(
-      [{ name, email, password: hashedPassword, role }],
-      {
-        session,
-      },
-    );
+    const [newUser] = await tx
+      .insert(users)
+      .values({ name, email, password: hashedPassword, role: role as User["role"] })
+      .returning();
 
-    if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
-      throw createError("Server Error", 500);
-    }
+    if (!JWT_SECRET || !JWT_REFRESH_SECRET) throw createError("Server Error", 500);
 
-    const accessToken = generateAccessToken(
-      newUser[0]._id.toString(),
-      newUser[0].role,
-    );
-
+    const accessToken = generateAccessToken(newUser.id, newUser.role);
     const jti = crypto.randomUUID();
-
-    const refreshToken = generateRefreshToken(
-      newUser[0]._id.toString(),
-      newUser[0].role,
-      jti,
-    );
+    const refreshToken = generateRefreshToken(newUser.id, newUser.role, jti);
 
     await redisClient.set(
       `refresh:${jti}`,
-      JSON.stringify({
-        userId: newUser[0]._id.toString(),
-        name: newUser[0].name,
-        role: newUser[0].role,
-        email: newUser[0].email,
-      }),
-      {
-        EX: Number(THIRTY_DAYS), // 30 days
-        NX: true, // Only set if not exists
-      },
+      JSON.stringify({ userId: newUser.id, name: newUser.name, role: newUser.role, email: newUser.email }),
+      { EX: Number(THIRTY_DAYS), NX: true },
     );
 
-    await session.commitTransaction();
-
-    return {
-      accessToken,
-      refreshToken,
-      user: newUser[0],
-    };
-  } catch (error) {
-    await session.abortTransaction();
-    throw error;
-  } finally {
-    session.endSession();
-  }
+    return { accessToken, refreshToken, user: newUser };
+  });
 };
 
 export const siginInUser = async (
@@ -106,82 +64,40 @@ export const siginInUser = async (
   refreshToken: string;
   user: { name: string; email: string; role: string; userId: string };
 }> => {
-  try {
-    const foundUser = await User.findOne({
-      email,
-    }).populate("password");
+  const foundUser = await db.query.users.findFirst({
+    where: eq(users.email, email),
+  });
 
-    if (!foundUser) {
-      throw createError("User not found", 404);
-    }
+  if (!foundUser) throw createError("User not found", 404);
 
-    const isPasswordCorrect = await comparePassword(
-      password,
-      foundUser.password,
-    );
+  const isPasswordCorrect = await comparePassword(password, foundUser.password);
+  if (!isPasswordCorrect) throw createError("Incorrect password", 401);
 
-    if (!isPasswordCorrect) {
-      throw createError("Incorrect password", 401);
-    }
+  if (!JWT_SECRET || !JWT_REFRESH_SECRET) throw createError("Server Error", 500);
 
-    if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
-      throw createError("Server Error", 500);
-    }
+  const accessToken = generateAccessToken(foundUser.id, foundUser.role);
+  const jti = crypto.randomUUID();
+  const refreshToken = generateRefreshToken(foundUser.id, foundUser.role, jti);
 
-    const accessToken = generateAccessToken(
-      foundUser._id.toString(),
-      foundUser.role,
-    );
+  await redisClient.set(
+    `refresh:${jti}`,
+    JSON.stringify({ userId: foundUser.id, name: foundUser.name, role: foundUser.role, email: foundUser.email }),
+    { EX: Number(THIRTY_DAYS), NX: true },
+  );
 
-    const jti = crypto.randomUUID();
-
-    const refreshToken = generateRefreshToken(
-      foundUser._id.toString(),
-      foundUser.role,
-      jti,
-    );
-
-    await redisClient.set(
-      `refresh:${jti}`,
-      JSON.stringify({
-        userId: foundUser._id.toString(),
-        name: foundUser.name,
-        role: foundUser.role,
-        email: foundUser.email,
-      }),
-      {
-        EX: Number(THIRTY_DAYS), // 30 days
-        NX: true, // Only set if not exists
-      },
-    );
-
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        email: foundUser.email,
-        name: foundUser.name,
-        role: foundUser.role,
-        userId: foundUser._id.toString(),
-      },
-    };
-  } catch (error) {
-    throw error;
-  }
+  return {
+    accessToken,
+    refreshToken,
+    user: { email: foundUser.email, name: foundUser.name, role: foundUser.role, userId: foundUser.id },
+  };
 };
 
 export const refreshAccessToken = async (refreshToken: string) => {
   try {
     const decoded: any = jwt.verify(refreshToken, JWT_REFRESH_SECRET!);
-
     const raw = await redisClient.get(`refresh:${decoded?.jti}`);
     const exists = raw
-      ? (JSON.parse(raw) as {
-          userId: string;
-          name: string;
-          role: string;
-          email: string;
-        })
+      ? (JSON.parse(raw) as { userId: string; name: string; role: string; email: string })
       : null;
 
     if (!exists || exists.userId !== decoded.userId) {
@@ -189,16 +105,11 @@ export const refreshAccessToken = async (refreshToken: string) => {
     }
 
     const accessToken = generateAccessToken(decoded.userId, decoded.role);
-
     return { accessToken, user: exists };
   } catch (error: any) {
-    if (
-      error?.message === "jwt expired" ||
-      error?.message === "invalid signature"
-    ) {
+    if (error?.message === "jwt expired" || error?.message === "invalid signature") {
       error.statusCode = 401;
     }
-    console.log(error);
     throw error;
   }
 };
@@ -206,28 +117,16 @@ export const refreshAccessToken = async (refreshToken: string) => {
 export const verifyAccessToken = async (accessToken: string) => {
   try {
     const decoded: any = verifyToken(accessToken);
-
-    return {
-      userId: decoded.userId as string,
-      role: decoded.role as string,
-    };
+    return { userId: decoded.userId as string, role: decoded.role as string };
   } catch (error: any) {
-    if (
-      error.message === "jwt expired" ||
-      error.message === "invalid signature"
-    ) {
+    if (error.message === "jwt expired" || error.message === "invalid signature") {
       error.statusCode = 401;
     }
-    console.log(error);
     throw error;
   }
 };
 
 export const revokeRefreshToken = async (refreshToken: string) => {
-  try {
-    const decoded: any = verifyRefreshToken(refreshToken);
-    await redisClient.del(`refresh:${decoded?.jti}`);
-  } catch (error) {
-    throw error;
-  }
+  const decoded: any = verifyRefreshToken(refreshToken);
+  await redisClient.del(`refresh:${decoded?.jti}`);
 };
