@@ -9,7 +9,8 @@
     "dev": "tsx watch src/app.ts",
     "seed:pinecone:temp": "tsx src/scripts/temp-seed-pinecone.ts",
     "seed:bookings:temp": "tsx src/scripts/temp-seed-bookings.ts",
-    "migrate:suppliers": "tsx src/scripts/migrate-suppliers.ts"
+    "migrate:suppliers": "tsx src/scripts/migrate-suppliers.ts",
+    "seed:from-mongo": "tsx src/scripts/seed-from-mongodb.ts"
   },
   "dependencies": {
     "@arcjet/inspect": "^1.0.0-beta.8",
@@ -59,6 +60,7 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.29.0",
     "globals": "^16.2.0",
+    "mongodb": "^7.3.0",
     "nodemon": "^3.1.10",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.20.3",
